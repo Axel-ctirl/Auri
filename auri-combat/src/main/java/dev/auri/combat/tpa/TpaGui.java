@@ -1,0 +1,113 @@
+package dev.auri.combat.tpa;
+
+import dev.auri.combat.AuriCombatPlugin;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextDecoration;
+import net.kyori.adventure.text.minimessage.MiniMessage;
+import org.bukkit.Bukkit;
+import org.bukkit.Material;
+import org.bukkit.entity.Player;
+import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.InventoryHolder;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.SkullMeta;
+
+import java.util.List;
+
+/**
+ * The three-row request popup: red wool to deny, the sender's head in the middle, green wool to
+ * accept. Players who prefer plain chat can opt out with {@code /tpaguitoggle}.
+ */
+public final class TpaGui {
+
+    public static final int SLOT_DENY = 11;
+    public static final int SLOT_HEAD = 13;
+    public static final int SLOT_ACCEPT = 15;
+
+    private static final int SIZE = 27;
+
+    private TpaGui() {
+    }
+
+    /** Marks an inventory as ours and carries the request the buttons act on. */
+    public static final class Holder implements InventoryHolder {
+        private final TpaRequest request;
+        private Inventory inventory;
+
+        private Holder(TpaRequest request) {
+            this.request = request;
+        }
+
+        public TpaRequest request() {
+            return request;
+        }
+
+        @Override
+        public Inventory getInventory() {
+            return inventory;
+        }
+    }
+
+    public static void open(AuriCombatPlugin plugin, Player target, Player sender, TpaRequest request) {
+        MiniMessage mm = MiniMessage.miniMessage();
+        String rawTitle = request.type() == TpaRequest.Type.TO_TARGET
+                ? plugin.config().tpa().guiTitle()
+                : plugin.config().tpa().guiTitleHere();
+
+        Holder holder = new Holder(request);
+        Inventory inventory = Bukkit.createInventory(holder, SIZE, mm.deserialize(rawTitle));
+        holder.inventory = inventory;
+
+        ItemStack filler = named(new ItemStack(Material.GRAY_STAINED_GLASS_PANE), Component.empty(), List.of());
+        for (int slot = 0; slot < SIZE; slot++) {
+            inventory.setItem(slot, filler);
+        }
+
+        inventory.setItem(SLOT_ACCEPT, named(
+                new ItemStack(Material.LIME_WOOL),
+                Component.text("Accept", NamedTextColor.GREEN, TextDecoration.BOLD),
+                List.of(Component.text("Teleport request from " + sender.getName(), NamedTextColor.GRAY))));
+
+        inventory.setItem(SLOT_DENY, named(
+                new ItemStack(Material.RED_WOOL),
+                Component.text("Deny", NamedTextColor.RED, TextDecoration.BOLD),
+                List.of(Component.text("Reject this request", NamedTextColor.GRAY))));
+
+        inventory.setItem(SLOT_HEAD, head(sender, request));
+
+        target.openInventory(inventory);
+    }
+
+    /** Closes the popup only if this exact request is what's on screen. */
+    public static void closeIfShowing(Player player, TpaRequest request) {
+        if (player.getOpenInventory().getTopInventory().getHolder() instanceof Holder holder
+                && holder.request().equals(request)) {
+            player.closeInventory();
+        }
+    }
+
+    private static ItemStack head(Player sender, TpaRequest request) {
+        ItemStack item = new ItemStack(Material.PLAYER_HEAD);
+        if (item.getItemMeta() instanceof SkullMeta meta) {
+            meta.setOwningPlayer(sender);
+            item.setItemMeta(meta);
+        }
+        String description = request.type() == TpaRequest.Type.TO_TARGET
+                ? "wants to teleport to you"
+                : "wants you to teleport to them";
+        return named(item,
+                Component.text(sender.getName(), NamedTextColor.WHITE),
+                List.of(Component.text(description, NamedTextColor.GRAY)));
+    }
+
+    private static ItemStack named(ItemStack item, Component name, List<Component> lore) {
+        item.editMeta(meta -> {
+            meta.displayName(name.decoration(TextDecoration.ITALIC, false));
+            if (!lore.isEmpty()) {
+                meta.lore(lore.stream().map(c -> c.decoration(TextDecoration.ITALIC, false)).toList());
+            }
+        });
+        return item;
+    }
+}

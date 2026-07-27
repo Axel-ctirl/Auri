@@ -1,0 +1,101 @@
+package dev.auri.combat.tpa;
+
+import org.bukkit.Location;
+import org.bukkit.Material;
+import org.bukkit.World;
+import org.bukkit.block.Block;
+
+import java.util.Optional;
+
+/**
+ * Finds somewhere survivable to drop an incoming player.
+ *
+ * <p>Without this, {@code /tpa} is a kill box: accept a request from a stranger and land in lava,
+ * inside a wall, or over the void. The search spirals outward from the requested destination and
+ * returns the closest spot that won't immediately kill.
+ */
+public final class SafeTeleport {
+
+    private SafeTeleport() {
+    }
+
+    /**
+     * @param destination where the traveller asked to go
+     * @param radius      horizontal blocks to search in each direction
+     * @param vertical    vertical blocks to search in each direction
+     * @return the nearest safe location, preserving the traveller's facing, or empty if the whole
+     * search box is lethal
+     */
+    public static Optional<Location> find(Location destination, int radius, int vertical) {
+        if (isSafe(destination)) {
+            return Optional.of(centre(destination));
+        }
+        // Expanding shells: closest candidates get checked first, so players land near where they
+        // meant to rather than at the far corner of the search box.
+        int maxRing = Math.max(radius, vertical);
+        for (int ring = 1; ring <= maxRing; ring++) {
+            for (int dy = -Math.min(ring, vertical); dy <= Math.min(ring, vertical); dy++) {
+                for (int dx = -Math.min(ring, radius); dx <= Math.min(ring, radius); dx++) {
+                    for (int dz = -Math.min(ring, radius); dz <= Math.min(ring, radius); dz++) {
+                        // Only the surface of the current shell — the interior was covered already.
+                        if (Math.max(Math.abs(dy), Math.max(Math.abs(dx), Math.abs(dz))) != ring) {
+                            continue;
+                        }
+                        Location candidate = destination.clone().add(dx, dy, dz);
+                        if (isSafe(candidate)) {
+                            return Optional.of(centre(candidate));
+                        }
+                    }
+                }
+            }
+        }
+        return Optional.empty();
+    }
+
+    /** Centres on the block in X/Z so players don't clip a corner, keeping their original facing. */
+    private static Location centre(Location location) {
+        Location centred = location.clone();
+        centred.setX(centred.getBlockX() + 0.5);
+        centred.setZ(centred.getBlockZ() + 0.5);
+        return centred;
+    }
+
+    /** Two blocks of breathable space, something solid underfoot, and nothing lethal touching it. */
+    public static boolean isSafe(Location location) {
+        World world = location.getWorld();
+        if (world == null) {
+            return false;
+        }
+        int y = location.getBlockY();
+        // Leave a block of headroom below the build limit and stay clear of the void.
+        if (y <= world.getMinHeight() || y >= world.getMaxHeight() - 1) {
+            return false;
+        }
+
+        Block feet = location.getBlock();
+        Block head = feet.getRelative(0, 1, 0);
+        Block ground = feet.getRelative(0, -1, 0);
+
+        if (!isPassable(feet) || !isPassable(head)) {
+            return false;
+        }
+        if (isLethal(feet) || isLethal(head) || isLethal(ground)) {
+            return false;
+        }
+        // Solid footing, or at least water to land in rather than an open drop.
+        return ground.getType().isSolid() || ground.getType() == Material.WATER;
+    }
+
+    private static boolean isPassable(Block block) {
+        return block.isPassable() && block.getType() != Material.LAVA;
+    }
+
+    private static boolean isLethal(Block block) {
+        return switch (block.getType()) {
+            case LAVA, FIRE, SOUL_FIRE, CAMPFIRE, SOUL_CAMPFIRE, MAGMA_BLOCK,
+                 CACTUS, SWEET_BERRY_BUSH, WITHER_ROSE, POINTED_DRIPSTONE, END_PORTAL,
+                 NETHER_PORTAL -> true;
+            default -> false;
+        };
+    }
+}

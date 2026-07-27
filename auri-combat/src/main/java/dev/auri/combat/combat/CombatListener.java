@@ -1,0 +1,201 @@
+package dev.auri.combat.combat;
+
+import dev.auri.combat.AuriCombatPlugin;
+import dev.auri.combat.config.AuriConfig;
+import com.destroystokyo.paper.event.player.PlayerElytraBoostEvent;
+import org.bukkit.Location;
+import org.bukkit.entity.EnderCrystal;
+import org.bukkit.entity.EnderPearl;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
+import org.bukkit.event.Listener;
+import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.entity.EntityExplodeEvent;
+import org.bukkit.event.entity.EntityResurrectEvent;
+import org.bukkit.event.entity.EntityToggleGlideEvent;
+import org.bukkit.event.entity.ProjectileHitEvent;
+import org.bukkit.event.entity.ProjectileLaunchEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.inventory.EquipmentSlot;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
+import org.bukkit.Material;
+import org.bukkit.enchantments.Enchantment;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/** Applies combat tags, enforces the restrictions that come with one, and punishes combat logs. */
+public final class CombatListener implements Listener {
+
+    private final AuriCombatPlugin plugin;
+    private final CombatManager combat;
+    private final AttackerResolver resolver;
+
+    public CombatListener(AuriCombatPlugin plugin, CombatManager combat, AttackerResolver resolver) {
+        this.plugin = plugin;
+        this.combat = combat;
+        this.resolver = resolver;
+    }
+
+    private AuriConfig.Combat cfg() {
+        return plugin.config().combat();
+    }
+
+    // ---------------------------------------------------------------- tagging
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onDamage(EntityDamageEvent event) {
+        // A player hitting a crystal is the detonator; the explosion that follows is credited to them.
+        if (event.getEntity() instanceof EnderCrystal crystal) {
+            Entity causing = event.getDamageSource().getCausingEntity();
+            if (causing instanceof Player player) {
+                resolver.rememberDetonator(crystal, player);
+            }
+            return;
+        }
+
+        if (!(event.getEntity() instanceof Player victim)) {
+            return;
+        }
+        Player attacker = resolver.resolve(event, cfg());
+        if (attacker != null) {
+            combat.tag(victim, attacker);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onExplode(EntityExplodeEvent event) {
+        // Forget a tick later — the explosion's damage events haven't fired yet.
+        Entity entity = event.getEntity();
+        plugin.getServer().getScheduler().runTask(plugin, () -> resolver.forget(entity));
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onPearlLand(ProjectileHitEvent event) {
+        if (!cfg().enderPearlLand() || !(event.getEntity() instanceof EnderPearl pearl)) {
+            return;
+        }
+        if (pearl.getShooter() instanceof Player thrower) {
+            // Refreshes an existing tag only. Pearling away from a fight shouldn't run the clock down,
+            // but a pearl thrown out of combat has no opponent to tag against.
+            combat.refresh(thrower);
+        }
+    }
+
+    // ----------------------------------------------------------- combat log
+
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public void onQuit(PlayerQuitEvent event) {
+        Player player = event.getPlayer();
+        if (!combat.isTagged(player)) {
+            return;
+        }
+        combat.clear(player);
+        AuriConfig.Combat cfg = cfg();
+        if (!cfg.punishOnQuit()) {
+            return;
+        }
+
+        Location where = player.getLocation();
+        PlayerInventory inventory = player.getInventory();
+
+        if (cfg.dropInventory()) {
+            for (ItemStack item : collectItems(inventory)) {
+                where.getWorld().dropItemNaturally(where, item);
+            }
+        }
+        if (cfg.clearInventory()) {
+            // Must happen before the kill, otherwise vanilla drops a second copy on death.
+            inventory.clear();
+            inventory.setArmorContents(null);
+            inventory.setItemInOffHand(null);
+        }
+        if (cfg.broadcastLog() && !plugin.messages().isDisabled("combat.combat-logged")) {
+            plugin.getServer().broadcast(
+                    plugin.messages().prefixed("combat.combat-logged", "player", player.getName()));
+        }
+
+        try {
+            player.setHealth(0.0);
+        } catch (Throwable t) {
+            // Some disconnect paths won't accept a health change. The inventory is already gone,
+            // so the punishment still lands — the player just won't get a death message.
+            plugin.getLogger().fine("Could not kill combat logger " + player.getName() + ": " + t.getMessage());
+        }
+    }
+
+    private List<ItemStack> collectItems(PlayerInventory inventory) {
+        List<ItemStack> items = new ArrayList<>();
+        for (ItemStack item : inventory.getContents()) {
+            if (item != null && !item.getType().isAir()) {
+                items.add(item.clone());
+            }
+        }
+        return items;
+    }
+
+    // --------------------------------------------------------- restrictions
+
+    @EventHandler(ignoreCancelled = true)
+    public void onGlide(EntityToggleGlideEvent event) {
+        if (!cfg().restrictElytra() || !event.isGliding()) {
+            return;
+        }
+        if (event.getEntity() instanceof Player player && combat.isTagged(player)) {
+            event.setCancelled(true);
+            plugin.messages().send(player, "combat.blocked-elytra");
+        }
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onElytraBoost(PlayerElytraBoostEvent event) {
+        if (cfg().restrictElytra() && combat.isTagged(event.getPlayer())) {
+            event.setCancelled(true);
+            plugin.messages().send(event.getPlayer(), "combat.blocked-elytra");
+        }
+    }
+
+    /**
+     * PlayerRiptideEvent fires after the fact and can't be cancelled, so the trident use itself is
+     * intercepted instead.
+     */
+    @EventHandler(ignoreCancelled = true)
+    public void onRiptide(PlayerInteractEvent event) {
+        if (!cfg().restrictRiptide() || event.getHand() != EquipmentSlot.HAND) {
+            return;
+        }
+        Player player = event.getPlayer();
+        ItemStack item = event.getItem();
+        if (item == null || item.getType() != Material.TRIDENT || !combat.isTagged(player)) {
+            return;
+        }
+        if (item.getEnchantmentLevel(Enchantment.RIPTIDE) > 0) {
+            event.setCancelled(true);
+            plugin.messages().send(player, "combat.blocked-riptide");
+        }
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onPearlThrow(ProjectileLaunchEvent event) {
+        if (!cfg().restrictEnderPearl() || !(event.getEntity() instanceof EnderPearl pearl)) {
+            return;
+        }
+        if (pearl.getShooter() instanceof Player player && combat.isTagged(player)) {
+            event.setCancelled(true);
+            plugin.messages().send(player, "combat.blocked-pearl");
+        }
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onTotem(EntityResurrectEvent event) {
+        if (cfg().restrictTotem()
+                && event.getEntity() instanceof Player player
+                && combat.isTagged(player)) {
+            event.setCancelled(true);
+        }
+    }
+}

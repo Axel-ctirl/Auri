@@ -1,0 +1,145 @@
+# AuriCombat — DonutSMP-style TPA + combat tagging.
+# All messages use MiniMessage: https://docs.advntr.dev/minimessage/format.html
+# Set any message to "" to disable it.
+
+combat:
+  # Seconds a player stays tagged. Re-taking or dealing damage refreshes this.
+  duration: 20
+
+  # Tag sources. Every one of these credits a *player* as the attacker.
+  triggers:
+    melee: true
+    projectiles: true      # arrows, tridents, wither skulls, snowballs, eggs
+    explosions: true       # end crystals, respawn anchors, beds, TNT
+    tamed-pets: true       # a player's wolf biting someone tags the owner
+    ender-pearl-land: false # tag the thrower when their pearl lands
+
+  # What happens when a tagged player disconnects.
+  punish-on-quit:
+    enabled: true
+    drop-inventory: true   # contents hit the ground where they logged
+    clear-inventory: true  # wipe on the player so nothing dupes on rejoin
+    broadcast: true
+
+  # Things a tagged player can't do.
+  restrict:
+    elytra: true           # blocks both deploying and firework-boosting
+    riptide: true
+    ender-pearl: false
+    totem: false           # true = totems won't save you while tagged
+
+  # Commands blocked while tagged.
+  command-blocker:
+    enabled: true
+    # /essentials:home is checked as /home so plugin-prefixed aliases can't slip through.
+    bypass-colons: true
+    # true  -> "/warp spawn" blocks "/warp spawn" but not "/warp spawn1"
+    # false -> prefix match, so "/warp spawn" also blocks "/warp spawn1"
+    match-entire-words: true
+    blocked:
+      - "/tpa"
+      - "/tpahere"
+      - "/tpaccept"
+      - "/home"
+      - "/sethome"
+      - "/spawn"
+      - "/warp"
+      - "/warp spawn"
+      - "/rtp"
+      - "/back"
+
+tpa:
+  # Seconds a pending request survives before it silently expires.
+  request-expire: 60
+  # Seconds the sender stands still before the teleport fires.
+  warmup: 3
+  # Seconds before the same player may send another request.
+  cooldown: 10
+
+  cancel-on-move: true
+  cancel-on-damage: true
+
+  # Only one pending request per target. false = a new request replaces the old one.
+  queue-requests: true
+
+  # Refuse to drop anyone into lava, fire, a wall, or the void — walk outward
+  # from the destination looking for somewhere survivable first.
+  safe-teleport:
+    enabled: true
+    search-radius: 5
+    search-vertical: 5
+    # No safe spot inside the search box: false cancels the teleport instead
+    # of dropping them on the original (unsafe) block.
+    fallback-to-original: false
+
+  # The chest-GUI request popup. Players can switch to plain clickable chat
+  # with /tpaguitoggle; this is just the server-wide default.
+  gui:
+    enabled: true
+    title: "<dark_gray>TPA REQUEST"
+    title-here: "<dark_gray>TPA HERE"
+    # Auto-close the popup when the request expires.
+    close-on-expire: true
+
+messages:
+  prefix: "<gray>[<gold>Auri</gold>]</gray> "
+
+  combat:
+    tagged: "<#cb0000>You are now in combat with <white><other></white>!"
+    action-bar: "<gray>Combat: <aqua><time>s"
+    expired: "<green>You are no longer in combat."
+    blocked-command: "<red>You can't run that while in combat!"
+    blocked-elytra: "<red>You can't use an elytra while in combat!"
+    blocked-riptide: "<red>You can't use riptide while in combat!"
+    blocked-pearl: "<red>You can't throw pearls while in combat!"
+    combat-logged: "<red><player> has combat logged!"
+
+  tpa:
+    # <player> is the other party in all of these.
+    sent: "<green>Teleport request sent to <white><player></white>. <gray>It expires in <time>s."
+    sent-here: "<green>Asked <white><player></white> to teleport to you. <gray>Expires in <time>s."
+    received: "<white><player></white><gray> sent you a teleport request."
+    received-here: "<white><player></white><gray> wants you to teleport to them."
+    # Rendered as clickable buttons on the line under the request.
+    button-accept: "<green><bold>[ACCEPT]</bold>"
+    button-deny: "<red><bold>[DENY]</bold>"
+    hover-accept: "<green>Accept this request"
+    hover-deny: "<red>Deny this request"
+
+    accepted-sender: "<green><player> accepted your teleport request."
+    accepted-target: "<green>You accepted <player>'s teleport request."
+    denied-sender: "<red><player> denied your teleport request."
+    denied-target: "<red>You denied <player>'s teleport request."
+    cancelled-sender: "<yellow>You cancelled your request to <player>."
+    cancelled-target: "<yellow><player> cancelled their teleport request."
+    expired-sender: "<gray>Your teleport request to <player> expired."
+    expired-target: "<gray><player>'s teleport request expired."
+
+    warmup-start: "<gray>Teleporting in <aqua><time>s<gray>. Don't move."
+    warmup-action-bar: "<gray>Teleporting in <aqua><time>s"
+    warmup-cancelled-move: "<red>Teleport cancelled — you moved."
+    warmup-cancelled-damage: "<red>Teleport cancelled — you took damage."
+    teleported: "<green>Teleported to <white><player></white>."
+
+    toggle-on: "<green>You're now accepting teleport requests."
+    toggle-off: "<red>You're no longer accepting teleport requests."
+    gui-on: "<green>Teleport requests will open as a menu."
+    gui-off: "<green>Teleport requests will arrive in chat."
+
+  errors:
+    no-permission: "<red>You don't have permission to do that."
+    player-only: "<red>That command is for players."
+    usage: "<red>Usage: <white><usage>"
+    player-not-found: "<red>That player isn't online."
+    self-request: "<red>You can't teleport to yourself."
+    already-pending: "<red>You already have a request pending for <white><player></white>."
+    no-pending: "<red>You have no pending teleport requests."
+    no-outgoing: "<red>You have no outgoing teleport request."
+    toggled-off: "<red><player> isn't accepting teleport requests."
+    cooldown: "<red>Wait <white><time>s</white> before sending another request."
+    in-combat-send: "<red>You can't send teleport requests while in combat!"
+    in-combat-accept: "<red>You can't accept teleport requests while in combat!"
+    target-in-combat: "<red><player> is in combat right now."
+    no-safe-location: "<red>No safe spot to land near <player>."
+    already-teleporting: "<red>You're already teleporting."
+    reloaded: "<green>Config reloaded."

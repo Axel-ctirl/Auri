@@ -1,0 +1,98 @@
+package dev.auri.combat.combat;
+
+import dev.auri.combat.config.AuriConfig;
+import org.bukkit.damage.DamageSource;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.Player;
+import org.bukkit.entity.Projectile;
+import org.bukkit.entity.Tameable;
+import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.projectiles.ProjectileSource;
+
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+
+/**
+ * Works out which <em>player</em> is responsible for a damage event.
+ *
+ * <p>Paper's {@link DamageSource} already unwraps arrows to their shooter and beds/anchors to the
+ * player who lit them. End crystals are the gap: the crystal is its own causing entity, so the
+ * player who detonated it is tracked separately.
+ */
+public final class AttackerResolver {
+
+    private enum Kind {MELEE, PROJECTILE, EXPLOSION, PET}
+
+    /** Crystal entity UUID -> the player who last hit it. */
+    private final Map<UUID, UUID> detonators = new ConcurrentHashMap<>();
+
+    public void rememberDetonator(Entity crystal, Player player) {
+        detonators.put(crystal.getUniqueId(), player.getUniqueId());
+    }
+
+    public void forget(Entity crystal) {
+        detonators.remove(crystal.getUniqueId());
+    }
+
+    public void clear() {
+        detonators.clear();
+    }
+
+    /**
+     * @return the player to credit for this damage, or null if no player is responsible or the
+     * relevant trigger is switched off in config.
+     */
+    public Player resolve(EntityDamageEvent event, AuriConfig.Combat cfg) {
+        DamageSource source = event.getDamageSource();
+        Entity direct = source.getDirectEntity();
+        Entity causing = source.getCausingEntity();
+
+        boolean explosion = event.getCause() == EntityDamageEvent.DamageCause.ENTITY_EXPLOSION
+                || event.getCause() == EntityDamageEvent.DamageCause.BLOCK_EXPLOSION;
+
+        Player attacker = null;
+        Kind kind = null;
+
+        if (direct instanceof Projectile projectile) {
+            ProjectileSource shooter = projectile.getShooter();
+            if (shooter instanceof Player player) {
+                attacker = player;
+                kind = explosion ? Kind.EXPLOSION : Kind.PROJECTILE;
+            }
+        }
+
+        if (attacker == null && direct != null) {
+            UUID detonator = detonators.get(direct.getUniqueId());
+            if (detonator != null) {
+                attacker = event.getEntity().getServer().getPlayer(detonator);
+                kind = Kind.EXPLOSION;
+            }
+        }
+
+        if (attacker == null && causing instanceof Player player) {
+            attacker = player;
+            kind = explosion ? Kind.EXPLOSION : Kind.MELEE;
+        }
+
+        if (attacker == null && causing instanceof Tameable tameable
+                && tameable.getOwner() instanceof Player owner) {
+            attacker = owner;
+            kind = Kind.PET;
+        }
+
+        if (attacker == null || !enabled(kind, cfg)) {
+            return null;
+        }
+        return attacker;
+    }
+
+    private boolean enabled(Kind kind, AuriConfig.Combat cfg) {
+        return switch (kind) {
+            case MELEE -> cfg.melee();
+            case PROJECTILE -> cfg.projectiles();
+            case EXPLOSION -> cfg.explosions();
+            case PET -> cfg.tamedPets();
+        };
+    }
+}

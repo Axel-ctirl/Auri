@@ -1,0 +1,463 @@
+package dev.auri.combat.tpa;
+
+import dev.auri.combat.AuriCombatPlugin;
+import dev.auri.combat.combat.CombatManager;
+import dev.auri.combat.config.AuriConfig;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.event.ClickEvent;
+import net.kyori.adventure.text.event.HoverEvent;
+import org.bukkit.Location;
+import org.bukkit.entity.Player;
+import org.bukkit.scheduler.BukkitTask;
+
+import java.util.ArrayDeque;
+import java.util.Deque;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+
+/**
+ * The TPA state machine: pending requests, cooldowns, per-player toggles, and teleport warmups.
+ *
+ * <p>The combat tag is checked at three points, not one. Blocking only {@code /tpa} leaves the
+ * bypass wide open — a player can queue a teleport a tick before swinging, or accept a request
+ * that was sent before the fight started. So: sending is gated, accepting is gated, and an
+ * in-flight warmup is cancelled if the traveller gets tagged.
+ */
+public final class TpaManager {
+
+    private final AuriCombatPlugin plugin;
+    private final CombatManager combat;
+
+    private final Map<UUID, Deque<TpaRequest>> incoming = new ConcurrentHashMap<>();
+    private final Map<UUID, TpaRequest> outgoing = new ConcurrentHashMap<>();
+    private final Map<UUID, Long> cooldowns = new ConcurrentHashMap<>();
+    private final Set<UUID> requestsDisabled = ConcurrentHashMap.newKeySet();
+    private final Set<UUID> chatMode = ConcurrentHashMap.newKeySet();
+    private final Map<UUID, Warmup> warmups = new ConcurrentHashMap<>();
+
+    private BukkitTask sweeper;
+
+    public TpaManager(AuriCombatPlugin plugin, CombatManager combat) {
+        this.plugin = plugin;
+        this.combat = combat;
+    }
+
+    public void start() {
+        stop();
+        sweeper = plugin.getServer().getScheduler().runTaskTimer(plugin, this::sweepExpired, 20L, 20L);
+    }
+
+    public void stop() {
+        if (sweeper != null) {
+            sweeper.cancel();
+            sweeper = null;
+        }
+        warmups.values().forEach(w -> w.task.cancel());
+        warmups.clear();
+    }
+
+    private AuriConfig.Tpa cfg() {
+        return plugin.config().tpa();
+    }
+
+    // ------------------------------------------------------------- sending
+
+    public void send(Player sender, Player target, TpaRequest.Type type) {
+        var messages = plugin.messages();
+
+        if (sender.getUniqueId().equals(target.getUniqueId())) {
+            messages.send(sender, "errors.self-request");
+            return;
+        }
+        if (combat.isTagged(sender)) {
+            messages.send(sender, "errors.in-combat-send");
+            return;
+        }
+        if (combat.isTagged(target)) {
+            messages.send(sender, "errors.target-in-combat", "player", target.getName());
+            return;
+        }
+        if (requestsDisabled.contains(target.getUniqueId())) {
+            messages.send(sender, "errors.toggled-off", "player", target.getName());
+            return;
+        }
+        long remainingCooldown = cooldownRemaining(sender);
+        if (remainingCooldown > 0) {
+            messages.send(sender, "errors.cooldown", "time", String.valueOf(remainingCooldown));
+            return;
+        }
+
+        Deque<TpaRequest> queue = incoming.computeIfAbsent(target.getUniqueId(), k -> new ArrayDeque<>());
+        boolean duplicate = queue.stream()
+                .anyMatch(r -> r.sender().equals(sender.getUniqueId()) && !r.isExpired());
+        if (duplicate) {
+            messages.send(sender, "errors.already-pending", "player", target.getName());
+            return;
+        }
+
+        // One outgoing request per sender: a new one supersedes whatever was already out there.
+        TpaRequest previous = outgoing.get(sender.getUniqueId());
+        if (previous != null) {
+            removeIncoming(previous);
+        }
+
+        TpaRequest request = new TpaRequest(
+                sender.getUniqueId(),
+                target.getUniqueId(),
+                type,
+                System.currentTimeMillis() + cfg().requestExpire() * 1000L);
+
+        if (!cfg().queueRequests()) {
+            // Drop the senders' outgoing handles too, or /tpacancel would still claim to cancel
+            // a request that no longer exists on the target's side.
+            queue.forEach(stale -> outgoing.remove(stale.sender()));
+            queue.clear();
+        }
+        queue.addLast(request);
+        outgoing.put(sender.getUniqueId(), request);
+
+        // The cooldown starts on send, not on accept — otherwise spamming requests costs nothing.
+        if (!sender.hasPermission("auri.tpa.bypass.cooldown")) {
+            cooldowns.put(sender.getUniqueId(), System.currentTimeMillis() + cfg().cooldown() * 1000L);
+        }
+
+        String expiry = String.valueOf(cfg().requestExpire());
+        messages.send(sender,
+                type == TpaRequest.Type.TO_TARGET ? "tpa.sent" : "tpa.sent-here",
+                "player", target.getName(), "time", expiry);
+
+        notifyTarget(request, sender, target);
+    }
+
+    private void notifyTarget(TpaRequest request, Player sender, Player target) {
+        if (cfg().guiEnabled() && !chatMode.contains(target.getUniqueId())) {
+            TpaGui.open(plugin, target, sender, request);
+            return;
+        }
+
+        var messages = plugin.messages();
+        messages.send(target,
+                request.type() == TpaRequest.Type.TO_TARGET ? "tpa.received" : "tpa.received-here",
+                "player", sender.getName());
+
+        Component accept = messages.get("tpa.button-accept")
+                .clickEvent(ClickEvent.runCommand("/tpaccept " + sender.getName()))
+                .hoverEvent(HoverEvent.showText(messages.get("tpa.hover-accept")));
+        Component deny = messages.get("tpa.button-deny")
+                .clickEvent(ClickEvent.runCommand("/tpdeny " + sender.getName()))
+                .hoverEvent(HoverEvent.showText(messages.get("tpa.hover-deny")));
+        target.sendMessage(Component.text("  ").append(accept).append(Component.text("   ")).append(deny));
+    }
+
+    // ----------------------------------------------------------- responding
+
+    /** @param senderName optional disambiguator when several requests are pending */
+    public void accept(Player target, String senderName) {
+        var messages = plugin.messages();
+        Optional<TpaRequest> found = findIncoming(target, senderName);
+        if (found.isEmpty()) {
+            messages.send(target, "errors.no-pending");
+            return;
+        }
+        TpaRequest request = found.get();
+
+        // Second gate: the request may have been sent before the fight started.
+        if (combat.isTagged(target)) {
+            messages.send(target, "errors.in-combat-accept");
+            return;
+        }
+        Player sender = plugin.getServer().getPlayer(request.sender());
+        if (sender == null) {
+            messages.send(target, "errors.player-not-found");
+            remove(request);
+            return;
+        }
+        if (combat.isTagged(sender)) {
+            messages.send(target, "errors.target-in-combat", "player", sender.getName());
+            return;
+        }
+
+        remove(request);
+        messages.send(sender, "tpa.accepted-sender", "player", target.getName());
+        messages.send(target, "tpa.accepted-target", "player", sender.getName());
+        beginTeleport(request);
+    }
+
+    public void deny(Player target, String senderName) {
+        var messages = plugin.messages();
+        Optional<TpaRequest> found = findIncoming(target, senderName);
+        if (found.isEmpty()) {
+            messages.send(target, "errors.no-pending");
+            return;
+        }
+        TpaRequest request = found.get();
+        remove(request);
+
+        Player sender = plugin.getServer().getPlayer(request.sender());
+        if (sender != null) {
+            messages.send(sender, "tpa.denied-sender", "player", target.getName());
+        }
+        messages.send(target, "tpa.denied-target",
+                "player", nameOf(request.sender()));
+    }
+
+    public void cancel(Player sender) {
+        TpaRequest request = outgoing.get(sender.getUniqueId());
+        if (request == null || request.isExpired()) {
+            plugin.messages().send(sender, "errors.no-outgoing");
+            return;
+        }
+        remove(request);
+        plugin.messages().send(sender, "tpa.cancelled-sender", "player", nameOf(request.target()));
+        Player target = plugin.getServer().getPlayer(request.target());
+        if (target != null) {
+            plugin.messages().send(target, "tpa.cancelled-target", "player", sender.getName());
+        }
+    }
+
+    // ------------------------------------------------------------ teleport
+
+    private void beginTeleport(TpaRequest request) {
+        Player traveller = plugin.getServer().getPlayer(request.traveller());
+        Player destination = plugin.getServer().getPlayer(request.destination());
+        if (traveller == null || destination == null) {
+            return;
+        }
+        if (warmups.containsKey(traveller.getUniqueId())) {
+            plugin.messages().send(traveller, "errors.already-teleporting");
+            return;
+        }
+
+        int seconds = cfg().warmup();
+        if (seconds <= 0 || traveller.hasPermission("auri.tpa.bypass.warmup")) {
+            finishTeleport(request);
+            return;
+        }
+
+        plugin.messages().send(traveller, "tpa.warmup-start", "time", String.valueOf(seconds));
+        Warmup warmup = new Warmup(traveller.getLocation(), seconds);
+        warmup.task = plugin.getServer().getScheduler().runTaskTimer(plugin, () -> {
+            Player current = plugin.getServer().getPlayer(request.traveller());
+            if (current == null) {
+                cancelWarmup(request.traveller(), null);
+                return;
+            }
+            warmup.remaining--;
+            if (warmup.remaining <= 0) {
+                cancelWarmup(request.traveller(), null);
+                finishTeleport(request);
+                return;
+            }
+            if (!plugin.messages().isDisabled("tpa.warmup-action-bar")) {
+                current.sendActionBar(plugin.messages()
+                        .get("tpa.warmup-action-bar", "time", String.valueOf(warmup.remaining)));
+            }
+        }, 20L, 20L);
+        warmups.put(traveller.getUniqueId(), warmup);
+    }
+
+    private void finishTeleport(TpaRequest request) {
+        Player traveller = plugin.getServer().getPlayer(request.traveller());
+        Player destination = plugin.getServer().getPlayer(request.destination());
+        var messages = plugin.messages();
+        if (traveller == null || destination == null) {
+            return;
+        }
+        // Third gate: they may have been tagged during the warmup with cancel-on-damage off.
+        if (combat.isTagged(traveller)) {
+            messages.send(traveller, "errors.in-combat-send");
+            return;
+        }
+
+        Location target = destination.getLocation();
+        if (cfg().safeTeleport()) {
+            Optional<Location> safe = SafeTeleport.find(
+                    target, cfg().safeSearchRadius(), cfg().safeSearchVertical());
+            if (safe.isPresent()) {
+                target = safe.get();
+            } else if (!cfg().fallbackToOriginal()) {
+                messages.send(traveller, "errors.no-safe-location", "player", destination.getName());
+                return;
+            }
+        }
+        // Keep the traveller's own view direction rather than snapping to the destination's.
+        target.setYaw(traveller.getLocation().getYaw());
+        target.setPitch(traveller.getLocation().getPitch());
+
+        traveller.teleport(target);
+        messages.send(traveller, "tpa.teleported", "player", destination.getName());
+    }
+
+    /** @param reason message key to send, or null to cancel silently */
+    public void cancelWarmup(UUID traveller, String reason) {
+        Warmup warmup = warmups.remove(traveller);
+        if (warmup == null) {
+            return;
+        }
+        warmup.task.cancel();
+        if (reason != null) {
+            Player player = plugin.getServer().getPlayer(traveller);
+            if (player != null) {
+                plugin.messages().send(player, reason);
+            }
+        }
+    }
+
+    public boolean hasWarmup(UUID player) {
+        return warmups.containsKey(player);
+    }
+
+    /** True when the player has moved off the block they started the warmup on. */
+    public boolean movedFromWarmupStart(Player player, Location to) {
+        Warmup warmup = warmups.get(player.getUniqueId());
+        if (warmup == null) {
+            return false;
+        }
+        Location start = warmup.start;
+        return start.getWorld() != to.getWorld()
+                || start.getBlockX() != to.getBlockX()
+                || start.getBlockY() != to.getBlockY()
+                || start.getBlockZ() != to.getBlockZ();
+    }
+
+    // ------------------------------------------------------------- toggles
+
+    public void toggleRequests(Player player) {
+        if (requestsDisabled.remove(player.getUniqueId())) {
+            plugin.messages().send(player, "tpa.toggle-on");
+        } else {
+            requestsDisabled.add(player.getUniqueId());
+            plugin.messages().send(player, "tpa.toggle-off");
+        }
+    }
+
+    public void toggleGui(Player player) {
+        if (chatMode.remove(player.getUniqueId())) {
+            plugin.messages().send(player, "tpa.gui-on");
+        } else {
+            chatMode.add(player.getUniqueId());
+            plugin.messages().send(player, "tpa.gui-off");
+        }
+    }
+
+    // ----------------------------------------------------------- lifecycle
+
+    public void handleQuit(Player player) {
+        UUID uuid = player.getUniqueId();
+        cancelWarmup(uuid, null);
+        TpaRequest sent = outgoing.remove(uuid);
+        if (sent != null) {
+            removeIncoming(sent);
+        }
+        Deque<TpaRequest> queue = incoming.remove(uuid);
+        if (queue != null) {
+            queue.forEach(r -> outgoing.remove(r.sender()));
+        }
+    }
+
+    private void sweepExpired() {
+        for (Deque<TpaRequest> queue : incoming.values()) {
+            Iterator<TpaRequest> iterator = queue.iterator();
+            while (iterator.hasNext()) {
+                TpaRequest request = iterator.next();
+                if (!request.isExpired()) {
+                    continue;
+                }
+                iterator.remove();
+                outgoing.remove(request.sender());
+
+                Player sender = plugin.getServer().getPlayer(request.sender());
+                if (sender != null) {
+                    plugin.messages().send(sender, "tpa.expired-sender", "player", nameOf(request.target()));
+                }
+                Player target = plugin.getServer().getPlayer(request.target());
+                if (target != null) {
+                    plugin.messages().send(target, "tpa.expired-target", "player", nameOf(request.sender()));
+                    if (cfg().guiCloseOnExpire()) {
+                        TpaGui.closeIfShowing(target, request);
+                    }
+                }
+            }
+        }
+        incoming.values().removeIf(Deque::isEmpty);
+        cooldowns.values().removeIf(expiry -> expiry <= System.currentTimeMillis());
+    }
+
+    // ------------------------------------------------------------- helpers
+
+    private Optional<TpaRequest> findIncoming(Player target, String senderName) {
+        Deque<TpaRequest> queue = incoming.get(target.getUniqueId());
+        if (queue == null || queue.isEmpty()) {
+            return Optional.empty();
+        }
+        if (senderName == null || senderName.isBlank()) {
+            // Most recent first — matches what the player just saw in chat.
+            return queue.stream().filter(r -> !r.isExpired()).reduce((first, second) -> second);
+        }
+        return queue.stream()
+                .filter(r -> !r.isExpired())
+                .filter(r -> senderName.equalsIgnoreCase(nameOf(r.sender())))
+                .findFirst();
+    }
+
+    /** Resolves a request the GUI is holding, so a stale button can't fire twice. */
+    public Optional<TpaRequest> findExact(TpaRequest request) {
+        Deque<TpaRequest> queue = incoming.get(request.target());
+        if (queue == null) {
+            return Optional.empty();
+        }
+        return queue.stream().filter(r -> r.equals(request) && !r.isExpired()).findFirst();
+    }
+
+    private void remove(TpaRequest request) {
+        removeIncoming(request);
+        outgoing.remove(request.sender());
+    }
+
+    private void removeIncoming(TpaRequest request) {
+        Deque<TpaRequest> queue = incoming.get(request.target());
+        if (queue != null) {
+            queue.remove(request);
+            if (queue.isEmpty()) {
+                incoming.remove(request.target());
+            }
+        }
+    }
+
+    private long cooldownRemaining(Player player) {
+        if (player.hasPermission("auri.tpa.bypass.cooldown")) {
+            return 0;
+        }
+        Long until = cooldowns.get(player.getUniqueId());
+        if (until == null) {
+            return 0;
+        }
+        long remaining = until - System.currentTimeMillis();
+        return remaining <= 0 ? 0 : (long) Math.ceil(remaining / 1000.0);
+    }
+
+    private String nameOf(UUID uuid) {
+        Player online = plugin.getServer().getPlayer(uuid);
+        if (online != null) {
+            return online.getName();
+        }
+        String name = plugin.getServer().getOfflinePlayer(uuid).getName();
+        return name == null ? "someone" : name;
+    }
+
+    /** Mutable because the countdown ticks down in place. */
+    private static final class Warmup {
+        private final Location start;
+        private int remaining;
+        private BukkitTask task;
+
+        private Warmup(Location start, int remaining) {
+            this.start = start;
+            this.remaining = remaining;
+        }
+    }
+}

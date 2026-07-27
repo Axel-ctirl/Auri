@@ -1,0 +1,139 @@
+package dev.auri.combat.combat;
+
+import dev.auri.combat.AuriCombatPlugin;
+import org.bukkit.entity.Player;
+import org.bukkit.scheduler.BukkitTask;
+
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+
+/**
+ * Owns combat-tag state.
+ *
+ * <p>A tag is per-player with an absolute expiry. Taking or dealing damage refreshes it rather
+ * than stacking, so a long fight keeps a rolling window open instead of accumulating minutes.
+ */
+public final class CombatManager {
+
+    /** Milliseconds. Keeps expiry independent of tick lag. */
+    private record Tag(long expiresAt, UUID opponent) {
+    }
+
+    private final AuriCombatPlugin plugin;
+    private final Map<UUID, Tag> tagged = new ConcurrentHashMap<>();
+    private BukkitTask ticker;
+
+    public CombatManager(AuriCombatPlugin plugin) {
+        this.plugin = plugin;
+    }
+
+    public void start() {
+        stop();
+        // One second — matches the granularity the action bar actually displays.
+        ticker = plugin.getServer().getScheduler().runTaskTimer(plugin, this::tick, 20L, 20L);
+    }
+
+    public void stop() {
+        if (ticker != null) {
+            ticker.cancel();
+            ticker = null;
+        }
+    }
+
+    /** Tags both parties against each other. No-op for either player holding the bypass permission. */
+    public void tag(Player victim, Player attacker) {
+        if (victim.getUniqueId().equals(attacker.getUniqueId())) {
+            return;
+        }
+        applyTag(victim, attacker);
+        applyTag(attacker, victim);
+    }
+
+    private void applyTag(Player player, Player opponent) {
+        if (player.hasPermission("auri.combat.bypass")) {
+            return;
+        }
+        long duration = plugin.config().combat().duration() * 1000L;
+        boolean wasTagged = isTagged(player);
+        tagged.put(player.getUniqueId(), new Tag(System.currentTimeMillis() + duration, opponent.getUniqueId()));
+        if (!wasTagged) {
+            plugin.messages().send(player, "combat.tagged", "other", opponent.getName());
+        }
+    }
+
+    public boolean isTagged(Player player) {
+        return isTagged(player.getUniqueId());
+    }
+
+    public boolean isTagged(UUID uuid) {
+        Tag tag = tagged.get(uuid);
+        return tag != null && tag.expiresAt() > System.currentTimeMillis();
+    }
+
+    /** Whole seconds remaining, rounded up so a 0.2s remainder still reads as "1s". */
+    public int secondsLeft(Player player) {
+        Tag tag = tagged.get(player.getUniqueId());
+        if (tag == null) {
+            return 0;
+        }
+        long remaining = tag.expiresAt() - System.currentTimeMillis();
+        return remaining <= 0 ? 0 : (int) Math.ceil(remaining / 1000.0);
+    }
+
+    /** The player this one is tagged against, or null. */
+    public UUID opponentOf(Player player) {
+        Tag tag = tagged.get(player.getUniqueId());
+        return tag == null ? null : tag.opponent();
+    }
+
+    /**
+     * Extends an existing tag back to the full duration. Does nothing to an untagged player —
+     * there's no opponent to tag them against.
+     *
+     * @return true if a tag was refreshed
+     */
+    public boolean refresh(Player player) {
+        Tag current = tagged.get(player.getUniqueId());
+        if (current == null || current.expiresAt() <= System.currentTimeMillis()) {
+            return false;
+        }
+        long duration = plugin.config().combat().duration() * 1000L;
+        tagged.put(player.getUniqueId(),
+                new Tag(System.currentTimeMillis() + duration, current.opponent()));
+        return true;
+    }
+
+    /** Drops the tag silently — used after the quit punishment has already been applied. */
+    public void clear(Player player) {
+        tagged.remove(player.getUniqueId());
+    }
+
+    /** Ends the tag and tells the player, as though it had run out on its own. */
+    public void release(Player player) {
+        if (tagged.remove(player.getUniqueId()) != null && player.isOnline()) {
+            plugin.messages().send(player, "combat.expired");
+        }
+    }
+
+    private void tick() {
+        long now = System.currentTimeMillis();
+        for (Map.Entry<UUID, Tag> entry : tagged.entrySet()) {
+            Player player = plugin.getServer().getPlayer(entry.getKey());
+            if (player == null || !player.isOnline()) {
+                // Quit handling removes the entry itself; this covers anything that slipped through.
+                tagged.remove(entry.getKey());
+                continue;
+            }
+            if (entry.getValue().expiresAt() <= now) {
+                tagged.remove(entry.getKey());
+                plugin.messages().send(player, "combat.expired");
+                continue;
+            }
+            if (!plugin.messages().isDisabled("combat.action-bar")) {
+                player.sendActionBar(plugin.messages()
+                        .get("combat.action-bar", "time", String.valueOf(secondsLeft(player))));
+            }
+        }
+    }
+}
