@@ -19,6 +19,16 @@ public final class CombatManager {
     private final Map<UUID, Hit> lastAttacker = new ConcurrentHashMap<>();
     private volatile boolean serverStopping;
     private int tickCounter;
+    private PlayerDataStore store;
+
+    public void setStore(PlayerDataStore store) {
+        this.store = store;
+    }
+
+    /** Combat alerts are opt-out per player; missing store means "not loaded yet", so allow. */
+    private boolean wantsCombatAlerts(ServerPlayerEntity player) {
+        return store == null || store.get(player.getUuid()).combatAlerts;
+    }
 
     private static long tagDurationMillis() {
         return Config.get().combat.tagSeconds * 1000L;
@@ -51,7 +61,7 @@ public final class CombatManager {
         }
         boolean alreadyTagged = isTagged(player);
         tagged.put(player.getUuid(), System.currentTimeMillis() + tagDurationMillis());
-        if (!alreadyTagged) {
+        if (!alreadyTagged && wantsCombatAlerts(player)) {
             Messages.actionBar(player, Messages.combatBar(Config.get().combat.tagSeconds));
         }
     }
@@ -74,12 +84,12 @@ public final class CombatManager {
             ServerPlayerEntity player = server.getPlayerManager().getPlayer(entry.getKey());
             if (entry.getValue() <= now) {
                 it.remove();
-                if (player != null) {
+                if (player != null && wantsCombatAlerts(player)) {
                     Messages.actionBar(player, Messages.combatExpired());
                 }
                 continue;
             }
-            if (player == null) {
+            if (player == null || !wantsCombatAlerts(player)) {
                 continue;
             }
             int seconds = (int) Math.ceil((entry.getValue() - now) / 1000.0);
@@ -126,7 +136,9 @@ public final class CombatManager {
                 && !killer.getUuid().equals(victim.getUuid())
                 && Config.get().combat.untagOnKill
                 && tagged.remove(killer.getUuid()) != null) {
-            Messages.actionBar(killer, Messages.combatUntagKill());
+            if (wantsCombatAlerts(killer)) {
+                Messages.actionBar(killer, Messages.combatUntagKill());
+            }
         }
     }
 

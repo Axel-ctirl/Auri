@@ -1,0 +1,52 @@
+{
+  "type": "minecraft:multi_action",
+  "title": { "text": "Settings", "color": "red", "bold": true },
+  "external_title": { "text": "Settings" },
+  "can_close_with_escape": true,
+  "pause": false,
+  "after_action": "wait_for_response",
+  "columns": 1,
+  "body": [
+    {
+      "type": "minecraft:plain_message",
+      "contents": { "text": "Choose a category", "color": "gray" },
+      "width": 260
+    }
+  ],
+  "actions": [
+    {
+      "label": { "text": "💬 Chat", "color": "white" },
+      "tooltip": { "text": "Chat and message visibility", "color": "gray" },
+      "width": 260,
+      "action": { "type": "run_command", "command": "settings chat" }
+    },
+    {
+      "label": { "text": "🔔 Notifications", "color": "white" },
+      "tooltip": { "text": "TPA and combat alerts", "color": "gray" },
+      "width": 260,
+      "action": { "type": "run_command", "command": "settings notifications" }
+    },
+    {
+      "label": { "text": "⚔ PvP", "color": "white" },
+      "tooltip": { "text": "Totem and explosion particles", "color": "gray" },
+      "width": 260,
+      "action": { "type": "run_command", "command": "settings pvp" }
+    },
+    {
+      "label": { "text": "🔒 Privacy", "color": "white" },
+      "tooltip": { "text": "Who can send you teleport requests", "color": "gray" },
+      "width": 260,
+      "action": { "type": "run_command", "command": "settings privacy" }
+    },
+    {
+      "label": { "text": "👥 Social", "color": "white" },
+      "tooltip": { "text": "Followers and friends", "color": "gray" },
+      "width": 260,
+      "action": { "type": "run_command", "command": "settings social" }
+    }
+  ],
+  "exit_action": {
+    "label": { "text": "Close", "color": "red" },
+    "width": 200
+  }
+}

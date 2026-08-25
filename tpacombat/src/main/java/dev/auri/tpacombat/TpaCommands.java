@@ -25,13 +25,17 @@ public final class TpaCommands {
 
     private final TpaManager tpa;
     private final CombatManager combat;
+    private final PlayerDataStore store;
+    private final SocialManager social;
 
     private static final SuggestionProvider<ServerCommandSource> ONLINE_PLAYERS =
             (context, builder) -> CommandSource.suggestMatching(context.getSource().getPlayerNames(), builder);
 
-    public TpaCommands(TpaManager tpa, CombatManager combat) {
+    public TpaCommands(TpaManager tpa, CombatManager combat, PlayerDataStore store, SocialManager social) {
         this.tpa = tpa;
         this.combat = combat;
+        this.store = store;
+        this.social = social;
     }
 
     public void register(CommandDispatcher<ServerCommandSource> dispatcher) {
@@ -122,6 +126,12 @@ public final class TpaCommands {
             Messages.actionBar(sender, Messages.tpaBlockedByTarget(targetName));
             return 0;
         }
+        // The privacy setting is a broader filter that sits in front of the explicit block list.
+        Visibility visibility = store.get(target.getUuid()).tpaRequests;
+        if (!visibility.allows(social, target.getUuid(), sender.getUuid())) {
+            Messages.actionBar(sender, Messages.tpaPrivacyBlocked(targetName, visibility));
+            return 0;
+        }
         if (tpa.hasPendingFrom(sender, target)) {
             Messages.actionBar(sender, Messages.tpaAlreadyPending(targetName));
             return 0;
@@ -131,8 +141,10 @@ public final class TpaCommands {
         int seconds = tpa.timeoutSeconds();
         String senderName = sender.getGameProfile().name();
         Messages.actionBar(sender, Messages.tpaSent(targetName, seconds));
-        Messages.chat(target, Messages.withPrefix(Messages.tpaReceived(senderName, seconds)));
-        Messages.actionBar(target, Messages.tpaReceivedBar(senderName));
+        if (store.get(target.getUuid()).tpaAlerts) {
+            Messages.chat(target, Messages.withPrefix(Messages.tpaReceived(senderName, seconds)));
+            Messages.actionBar(target, Messages.tpaReceivedBar(senderName));
+        }
         return 1;
     }
 

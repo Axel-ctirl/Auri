@@ -21,8 +21,20 @@ public final class Messages {
         to.sendMessage(message, true);
     }
 
+    private static PlayerDataStore store;
+
+    public static void setStore(PlayerDataStore dataStore) {
+        store = dataStore;
+    }
+
+    /** Sent per player rather than server-wide so the "Server Messages" toggle can opt out. */
     public static void broadcast(MinecraftServer server, Text message) {
-        server.getPlayerManager().broadcast(withPrefix(message), false);
+        Text prefixed = withPrefix(message);
+        for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+            if (store == null || store.get(player.getUuid()).serverMessages) {
+                player.sendMessage(prefixed);
+            }
+        }
     }
 
     private static Text c(String text, Formatting color) {
@@ -87,6 +99,10 @@ public final class Messages {
 
     public static Text tpaBlockedByTarget(String player) {
         return seq(c(player, Formatting.WHITE), c(" has blocked TPA requests from you.", Formatting.RED));
+    }
+
+    public static Text tpaPrivacyBlocked(String player, Visibility visibility) {
+        return seq(c(player, Formatting.WHITE), c(" " + visibility.deniedReason() + ".", Formatting.RED));
     }
 
     public static Text tpaAlreadyPending(String player) {

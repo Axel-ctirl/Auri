@@ -1,6 +1,7 @@
 # TpaCombat — Fabric 1.21.11
 
-Server-side TPA with combat tagging, combat-log punishment and a branded tab list.
+Server-side TPA with combat tagging, combat-log punishment, a branded tab list, a per-player
+settings menu on the **G** key, and a follower/friends system.
 
 This is a Fabric port of the Forge 1.20.1 mod **TpaCombat 1.0.0 by Min2200**. Behaviour,
 commands, config keys and player-facing messages are unchanged; only the platform layer was
@@ -83,6 +84,75 @@ clickable, so `/gotorift`, `/maces` and `/tps` still need to come from whatever 
 It is resent only when the player count actually changes, plus once to each player as they join,
 so it costs one small packet per change rather than one per tick.
 
+## Settings menu (G)
+
+Press **G** (Quick Actions) to open the settings menu. It also appears in the pause menu under
+**Custom Options**. No client mod is needed.
+
+This uses vanilla **dialogs**, added to Minecraft in 1.21.6 — a server-driven UI that vanilla
+clients render natively. It is not a chest GUI and not a Paper-only feature; Paper's Dialog API is
+just a plugin-facing wrapper over the same system.
+
+The menu is built per player at the moment it opens (via `RegistryEntry.of`, not a registered
+static dialog), which is what lets each row show that player's current value. Clicking a row
+cycles it and re-opens the menu, so it reads as toggling in place.
+
+| Category | Setting | Values |
+| --- | --- | --- |
+| 💬 Chat | Public Chat | ON / OFF |
+| | Private Messages | Everyone / Friends / Following / Nobody |
+| | Server Messages | ON / OFF |
+| | Death Messages | ON / OFF |
+| | Advancement Messages | ON / OFF |
+| | Join/Leave Messages | ON / OFF |
+| 🔔 Notifications | TPA Alerts | ON / OFF |
+| | Combat Alerts | ON / OFF |
+| ⚔ PvP | Totem Particles | ON / OFF |
+| | Explosion Particles | ON / OFF |
+| 🔒 Privacy | Who Can TPA You | Everyone / Friends / Following / Nobody |
+| 👥 Social | shortcuts to the follow lists | |
+
+Everything is also reachable from chat: `/settings`, `/settings <category>`,
+`/settings cycle <setting>`.
+
+Settings are stored per player at `<world>/data/tpacombat_players.json`, flushed about once a
+minute and on shutdown.
+
+### How each toggle is enforced
+
+The PvP and message toggles work by withholding outgoing packets from that player only, via a
+mixin on `ServerCommonNetworkHandler#send`. Nothing about the world changes — these are purely
+what *you* are shown.
+
+- **Totem Particles** drops the totem entity-status packet. The totem still saves you; you just
+  don't get the screen-filling animation.
+- **Explosion Particles** drops explosion packets **only when they carry no knockback for you**.
+  An explosion that actually shoves you is always delivered, so turning this on can't be used to
+  dodge explosion physics — it removes the visual spam from explosions happening near you.
+- **Death / Advancement / Join-Leave Messages** are matched on the vanilla translation key
+  (`death.*`, `chat.type.advancement.*`, `multiplayer.player.*`) rather than on rendered text, so
+  they keep working regardless of language or formatting.
+- **Public Chat** drops player chat packets.
+- **Server Messages** covers this mod's own broadcasts, such as combat-log announcements.
+- **TPA / Combat Alerts** suppress this mod's own request and combat-tag messages.
+
+## Followers and friends
+
+Follows are one-directional. When two players follow each other they become **friends**, which is
+what the `Friends` visibility level checks.
+
+| Command | Effect |
+| --- | --- |
+| `/follow <player>` | Follow someone. They are told, and told if it made you friends. |
+| `/unfollow <player>` | Stop following. |
+| `/following` | Who you follow. |
+| `/followers` | Who follows you. |
+| `/friends` | Mutual follows. |
+
+**Who Can TPA You** (Privacy) uses this: set it to `Friends` and only mutual follows can send you
+a request; `Following` allows people you follow; `Nobody` refuses everyone. It sits in front of
+`/tpablock`, which remains a hard per-player block.
+
 ## Config
 
 Written to `config/tpacombat.json` on first start, re-read on every server start. Values are
@@ -128,6 +198,8 @@ clamped to the same ranges the original Forge config enforced.
 | `tablist.accentColor` | Named Minecraft colour, e.g. `red`, `gold`, `aqua`. Bad names fall back to red. |
 | `tablist.refreshTicks` | How often to check for a player-count change. 20 = once a second. 1–1200. |
 
+Per-player settings are not in this file — they live in the world save, one entry per player.
+
 Block lists are stored per world at `<world>/data/tpacombat_blocks.json`.
 
 ## Porting notes
@@ -152,4 +224,5 @@ differences worth knowing about:
 - **Disconnect hook.** `PlayerLoggedOutEvent` became `ServerPlayConnectionEvents.DISCONNECT`,
   which also runs while the player is still in the world — required for the kill to drop items.
 - **Text.** `Component`/`ClickEvent(Action, String)` became `Text`/`new ClickEvent.RunCommand(...)`,
-  which is a sealed-interface record in 1.21.11.
+  which is a sealed-interface record in 1.21.11. The client runs these through
+  `CommandManager.stripLeadingSlash`, so commands work with or without a leading `/`.
