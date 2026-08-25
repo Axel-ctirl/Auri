@@ -1,6 +1,6 @@
 # TpaCombat — Fabric 1.21.11
 
-Server-side TPA with combat tagging and combat-log punishment.
+Server-side TPA with combat tagging, combat-log punishment and a branded tab list.
 
 This is a Fabric port of the Forge 1.20.1 mod **TpaCombat 1.0.0 by Min2200**. Behaviour,
 commands, config keys and player-facing messages are unchanged; only the platform layer was
@@ -63,6 +63,26 @@ action bar. Walking to a different block or entering combat cancels it and appli
 cancels it, but is not the requester's fault, so no cooldown is applied. Requests expire after
 `requestTimeoutSeconds`, and are dropped if the requester logs off.
 
+## Tab list
+
+The server name and live player count are shown above the tab list, with command hints below it:
+
+```
+                        Exploit SMP
+                        27 Players
+
+              < the vanilla player grid goes here >
+
+                 /gotorift  /maces  /tps
+```
+
+The name and the command hints use `tablist.accentColor` (red by default); the player count is
+white. The footer is only a hint line — it does not register those commands or make them
+clickable, so `/gotorift`, `/maces` and `/tps` still need to come from whatever provides them.
+
+It is resent only when the player count actually changes, plus once to each player as they join,
+so it costs one small packet per change rather than one per tick.
+
 ## Config
 
 Written to `config/tpacombat.json` on first start, re-read on every server start. Values are
@@ -81,6 +101,13 @@ clamped to the same ranges the original Forge config enforced.
     "teleportDelaySeconds": 5,
     "cancelOnMove": true,
     "cancelCooldownSeconds": 15
+  },
+  "tablist": {
+    "enabled": true,
+    "serverName": "Exploit SMP",
+    "commands": ["/gotorift", "/maces", "/tps"],
+    "accentColor": "red",
+    "refreshTicks": 20
   }
 }
 ```
@@ -95,6 +122,11 @@ clamped to the same ranges the original Forge config enforced.
 | `tpa.teleportDelaySeconds` | Countdown after accept. `0` teleports instantly. 0–3600. |
 | `tpa.cancelOnMove` | Moving to another block cancels the countdown. |
 | `tpa.cancelCooldownSeconds` | Cooldown after a self-inflicted cancel. `0` disables. 0–3600. |
+| `tablist.enabled` | Show the custom tab list header and footer. |
+| `tablist.serverName` | First header line, bold in the accent colour. |
+| `tablist.commands` | Command hints listed in the footer. Any number of entries. |
+| `tablist.accentColor` | Named Minecraft colour, e.g. `red`, `gold`, `aqua`. Bad names fall back to red. |
+| `tablist.refreshTicks` | How often to check for a player-count change. 20 = once a second. 1–1200. |
 
 Block lists are stored per world at `<world>/data/tpacombat_blocks.json`.
 

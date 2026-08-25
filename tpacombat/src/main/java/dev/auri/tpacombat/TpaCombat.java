@@ -18,10 +18,12 @@ public final class TpaCombat implements DedicatedServerModInitializer {
         CombatManager combat = new CombatManager();
         TpaManager tpa = new TpaManager(combat);
         TpaCommands commands = new TpaCommands(tpa, combat);
+        TabList tabList = new TabList();
 
         ServerLifecycleEvents.SERVER_STARTING.register(server -> {
             Config.load();
             combat.onServerStarting();
+            tabList.reset();
         });
         ServerLifecycleEvents.SERVER_STARTED.register(server -> tpa.blocks().load(server));
 
@@ -34,11 +36,15 @@ public final class TpaCombat implements DedicatedServerModInitializer {
         ServerTickEvents.END_SERVER_TICK.register(server -> {
             combat.onEndTick(server);
             tpa.onEndTick(server);
+            tabList.onEndTick(server);
         });
 
         ServerLivingEntityEvents.AFTER_DAMAGE.register(
                 (entity, source, baseDamage, damageTaken, blocked) -> combat.onAfterDamage(entity, source));
         ServerLivingEntityEvents.AFTER_DEATH.register(combat::onAfterDeath);
+
+        ServerPlayConnectionEvents.JOIN.register(
+                (handler, sender, server) -> tabList.sendTo(handler.getPlayer(), server));
 
         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
             combat.onDisconnect(handler.getPlayer());

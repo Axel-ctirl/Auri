@@ -11,6 +11,8 @@ import java.io.Reader;
 import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Mirrors the ForgeConfigSpec of the original mod, but backed by a plain JSON file since
@@ -24,6 +26,7 @@ public final class Config {
 
     public Combat combat = new Combat();
     public Tpa tpa = new Tpa();
+    public TabListSettings tablist = new TabListSettings();
 
     public static final class Combat {
         /** Seconds a player stays combat-tagged after the last PvP hit dealt or received. */
@@ -54,6 +57,19 @@ public final class Config {
         public int cancelCooldownSeconds = 15;
     }
 
+    public static final class TabListSettings {
+        /** Show the server name, player count and command hints on the tab list. */
+        public boolean enabled = true;
+        /** First header line, shown bold in the accent colour. */
+        public String serverName = "Exploit SMP";
+        /** Command hints listed in the footer. */
+        public List<String> commands = new ArrayList<>(List.of("/gotorift", "/maces", "/tps"));
+        /** Named Minecraft colour for the server name and the footer. */
+        public String accentColor = "red";
+        /** How often to check whether the player count changed, in ticks. 20 = once a second. */
+        public int refreshTicks = 20;
+    }
+
     private static volatile Config instance = new Config();
 
     public static Config get() {
@@ -82,6 +98,12 @@ public final class Config {
             if (loaded.tpa == null) {
                 loaded.tpa = new Tpa();
             }
+            if (loaded.tablist == null) {
+                loaded.tablist = new TabListSettings();
+            }
+            if (loaded.tablist.commands == null) {
+                loaded.tablist.commands = new ArrayList<>();
+            }
             loaded.clamp();
             instance = loaded;
         } catch (Exception e) {
@@ -109,6 +131,7 @@ public final class Config {
         tpa.requestTimeoutSeconds = clamp(tpa.requestTimeoutSeconds, 1, 3600);
         tpa.teleportDelaySeconds = clamp(tpa.teleportDelaySeconds, 0, 3600);
         tpa.cancelCooldownSeconds = clamp(tpa.cancelCooldownSeconds, 0, 3600);
+        tablist.refreshTicks = clamp(tablist.refreshTicks, 1, 1200);
     }
 
     private static int clamp(int value, int min, int max) {
