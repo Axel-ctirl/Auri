@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "id": "tpacombat",
+  "version": "${version}",
+  "name": "TpaCombat",
+  "description": "Server-side TPA with combat tagging and combat-log punishment. Fabric port of the Forge 1.20.1 mod by Min2200.",
+  "authors": [ "Min2200" ],
+  "contributors": [ "Auri (Fabric 1.21.11 port)" ],
+  "contact": {
+    "repo": "https://github.com/axel-ctirl/auri"
+  },
+  "license": "All Rights Reserved",
+  "environment": "server",
+  "entrypoints": {
+    "server": [ "dev.auri.tpacombat.TpaCombat" ]
+  },
+  "depends": {
+    "fabricloader": ">=${loader_version}",
+    "fabric-api": "*",
+    "minecraft": "~${minecraft_version}",
+    "java": ">=21"
+  }
+}
