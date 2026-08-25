@@ -69,7 +69,7 @@ cancels it, but is not the requester's fault, so no cooldown is applied. Request
 The server name and live player count are shown above the tab list, with command hints below it:
 
 ```
-                        Exploit SMP
+                        Exploit Smp
                         27 Players
 
               < the vanilla player grid goes here >
@@ -174,7 +174,7 @@ clamped to the same ranges the original Forge config enforced.
   },
   "tablist": {
     "enabled": true,
-    "serverName": "Exploit SMP",
+    "serverName": "Exploit Smp",
     "commands": ["/gotorift", "/maces", "/tps"],
     "accentColor": "red",
     "refreshTicks": 20

@@ -61,7 +61,7 @@ public final class Config {
         /** Show the server name, player count and command hints on the tab list. */
         public boolean enabled = true;
         /** First header line, shown bold in the accent colour. */
-        public String serverName = "Exploit SMP";
+        public String serverName = "Exploit Smp";
         /** Command hints listed in the footer. */
         public List<String> commands = new ArrayList<>(List.of("/gotorift", "/maces", "/tps"));
         /** Named Minecraft colour for the server name and the footer. */
