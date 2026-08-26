@@ -11,12 +11,21 @@ public final class TpaCombat implements DedicatedServerModInitializer {
 
     public static final String MOD_ID = "tpacombat";
 
+    private static volatile SocialManager socialManager;
+
+    /** Read by the friends dialog, which is built from a static context. */
+    public static SocialManager social() {
+        return socialManager;
+    }
+
     @Override
     public void onInitializeServer() {
         Config.load();
 
         PlayerDataStore store = new PlayerDataStore();
         SocialManager social = new SocialManager(store);
+        socialManager = social;
+        PlayerEffects effects = new PlayerEffects(store);
         PacketFilter.init(store);
         Messages.setStore(store);
 
@@ -51,6 +60,7 @@ public final class TpaCombat implements DedicatedServerModInitializer {
             combat.onEndTick(server);
             tpa.onEndTick(server);
             tabList.onEndTick(server);
+            effects.onEndTick(server);
             if (++saveTimer[0] >= 1200) {
                 saveTimer[0] = 0;
                 store.saveIfDirty();
@@ -59,7 +69,12 @@ public final class TpaCombat implements DedicatedServerModInitializer {
 
         ServerLivingEntityEvents.AFTER_DAMAGE.register(
                 (entity, source, baseDamage, damageTaken, blocked) -> combat.onAfterDamage(entity, source));
-        ServerLivingEntityEvents.AFTER_DEATH.register(combat::onAfterDeath);
+        ServerLivingEntityEvents.AFTER_DEATH.register((entity, source) -> {
+            combat.onAfterDeath(entity, source);
+            if (entity instanceof net.minecraft.server.network.ServerPlayerEntity dead) {
+                effects.onDeath(dead.getEntityWorld().getServer(), dead);
+            }
+        });
 
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
             tabList.sendTo(handler.getPlayer(), server);

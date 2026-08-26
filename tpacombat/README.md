@@ -97,20 +97,27 @@ The menu is built per player at the moment it opens (via `RegistryEntry.of`, not
 static dialog), which is what lets each row show that player's current value. Clicking a row
 cycles it and re-opens the menu, so it reads as toggling in place.
 
+Category buttons carry real item textures rather than unicode, using the `object` text component
+added in 1.21.9 (`{"object": "atlas", "sprite": "minecraft:item/..."}`). The same mechanism draws
+player heads beside names in the Friends list.
+
 | Category | Setting | Values |
 | --- | --- | --- |
-| 💬 Chat | Public Chat | ON / OFF |
+| Chat | Public Chat | ON / OFF |
 | | Private Messages | Everyone / Friends / Following / Nobody |
 | | Server Messages | ON / OFF |
 | | Death Messages | ON / OFF |
 | | Advancement Messages | ON / OFF |
 | | Join/Leave Messages | ON / OFF |
-| 🔔 Notifications | TPA Alerts | ON / OFF |
+| Notifications | TPA Alerts | ON / OFF |
 | | Combat Alerts | ON / OFF |
-| ⚔ PvP | Totem Particles | ON / OFF |
+| PvP | Totem Particles | ON / OFF |
 | | Explosion Particles | ON / OFF |
-| 🔒 Privacy | Who Can TPA You | Everyone / Friends / Following / Nobody |
-| 👥 Social | shortcuts to the follow lists | |
+| Privacy | Who Can TPA You | Everyone / Friends / Following / Nobody |
+| General | Phantom Spawning | ON / OFF |
+| | Keep Ender Pearls On Death | ON / OFF |
+| | Night Vision | ON / OFF |
+| Friends | follow list, filter and search | |
 
 Everything is also reachable from chat: `/settings`, `/settings <category>`,
 `/settings cycle <setting>`.
@@ -136,6 +143,19 @@ what *you* are shown.
 - **Server Messages** covers this mod's own broadcasts, such as combat-log announcements.
 - **TPA / Combat Alerts** suppress this mod's own request and combat-tag messages.
 
+### General
+
+- **Phantom Spawning** — turning this off holds that player's `timeSinceRest` statistic at zero.
+  The phantom spawner gates on each player's own value, so this suppresses phantoms for them and
+  nobody else, with no mixin involved. The trade-off is that their "time since last rest"
+  statistic stays pinned at zero.
+- **Keep Ender Pearls On Death** — when off, that player's in-flight ender pearls are discarded
+  when they die. When on, vanilla behaviour is left alone. There is no vanilla gamerule for this
+  in 1.21.11, so it is enforced by the mod on the death event.
+- **Night Vision** — an infinite, ambient, particle-free night vision effect, re-applied on a
+  timer so it survives death, dimension changes and milk. Toggling it off only clears the
+  infinite ambient instance, so potion- and beacon-granted night vision is left untouched.
+
 ## Followers and friends
 
 Follows are one-directional. When two players follow each other they become **friends**, which is
@@ -148,6 +168,11 @@ what the `Friends` visibility level checks.
 | `/following` | Who you follow. |
 | `/followers` | Who follows you. |
 | `/friends` | Mutual follows. |
+
+The **Friends** tab in the menu shows the same data with player heads beside each name. **Filter**
+cycles between friends, following and followers; **Search** and **+ Follow** open a name-entry
+screen (a dialog text input feeding `dynamic/run_command`). Clicking a name unfollows them —
+addressed by UUID, so it works for offline players too.
 
 **Who Can TPA You** (Privacy) uses this: set it to `Friends` and only mutual follows can send you
 a request; `Following` allows people you follow; `Nobody` refuses everyone. It sits in front of

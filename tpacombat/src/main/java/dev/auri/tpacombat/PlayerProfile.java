@@ -25,8 +25,18 @@ public final class PlayerProfile {
     // Privacy
     public Visibility tpaRequests = Visibility.EVERYONE;
 
+    // General
+    /** When false, phantoms stop spawning around this player. */
+    public boolean phantomSpawning = true;
+    /** When false, this player's in-flight ender pearls are discarded when they die. */
+    public boolean keepEnderPearlsOnDeath = true;
+    public boolean nightVision = false;
+
     // Social — UUID strings so GSON round-trips them without a custom adapter.
     public Set<String> following = new LinkedHashSet<>();
+
+    /** Which list the Friends tab is showing: friends, following or followers. */
+    public String friendsFilter = "friends";
 
     /** Last name seen for this player, so offline lookups can show something useful. */
     public String lastKnownName = "";
@@ -44,6 +54,9 @@ public final class PlayerProfile {
         }
         if (lastKnownName == null) {
             lastKnownName = "";
+        }
+        if (friendsFilter == null) {
+            friendsFilter = "friends";
         }
     }
 }

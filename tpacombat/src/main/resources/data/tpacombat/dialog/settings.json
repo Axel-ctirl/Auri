@@ -1,11 +1,11 @@
 {
   "type": "minecraft:multi_action",
-  "title": { "text": "Settings", "color": "red", "bold": true },
+  "title": { "text": "Settings", "color": "red" },
   "external_title": { "text": "Settings" },
   "can_close_with_escape": true,
   "pause": false,
   "after_action": "wait_for_response",
-  "columns": 1,
+  "columns": 2,
   "body": [
     {
       "type": "minecraft:plain_message",
@@ -15,34 +15,58 @@
   ],
   "actions": [
     {
-      "label": { "text": "💬 Chat", "color": "white" },
+      "label": [
+        { "object": "atlas", "sprite": "minecraft:item/oak_sign" },
+        { "text": " Chat", "color": "white" }
+      ],
       "tooltip": { "text": "Chat and message visibility", "color": "gray" },
-      "width": 260,
+      "width": 200,
       "action": { "type": "run_command", "command": "settings chat" }
     },
     {
-      "label": { "text": "🔔 Notifications", "color": "white" },
+      "label": [
+        { "object": "atlas", "sprite": "minecraft:item/bell" },
+        { "text": " Notifications", "color": "white" }
+      ],
       "tooltip": { "text": "TPA and combat alerts", "color": "gray" },
-      "width": 260,
+      "width": 200,
       "action": { "type": "run_command", "command": "settings notifications" }
     },
     {
-      "label": { "text": "⚔ PvP", "color": "white" },
+      "label": [
+        { "object": "atlas", "sprite": "minecraft:item/diamond_sword" },
+        { "text": " PvP", "color": "white" }
+      ],
       "tooltip": { "text": "Totem and explosion particles", "color": "gray" },
-      "width": 260,
+      "width": 200,
       "action": { "type": "run_command", "command": "settings pvp" }
     },
     {
-      "label": { "text": "🔒 Privacy", "color": "white" },
+      "label": [
+        { "object": "atlas", "sprite": "minecraft:item/barrier" },
+        { "text": " Privacy", "color": "white" }
+      ],
       "tooltip": { "text": "Who can send you teleport requests", "color": "gray" },
-      "width": 260,
+      "width": 200,
       "action": { "type": "run_command", "command": "settings privacy" }
     },
     {
-      "label": { "text": "👥 Social", "color": "white" },
-      "tooltip": { "text": "Followers and friends", "color": "gray" },
-      "width": 260,
-      "action": { "type": "run_command", "command": "settings social" }
+      "label": [
+        { "object": "atlas", "sprite": "minecraft:item/comparator" },
+        { "text": " General", "color": "white" }
+      ],
+      "tooltip": { "text": "Phantoms, ender pearls and night vision", "color": "gray" },
+      "width": 200,
+      "action": { "type": "run_command", "command": "settings general" }
+    },
+    {
+      "label": [
+        { "object": "atlas", "sprite": "minecraft:item/name_tag" },
+        { "text": " Friends", "color": "white" }
+      ],
+      "tooltip": { "text": "Followers, following and friends", "color": "gray" },
+      "width": 200,
+      "action": { "type": "run_command", "command": "settings friends" }
     }
   ],
   "exit_action": {

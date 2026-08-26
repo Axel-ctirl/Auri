@@ -34,6 +34,34 @@ public final class SettingsCommands {
             }));
         }
 
+        root = root.then(CommandManager.literal("friendsfilter").executes(context -> {
+            ServerPlayerEntity player = context.getSource().getPlayerOrThrow();
+            PlayerProfile profile = store.get(player.getUuid());
+            profile.friendsFilter = switch (profile.friendsFilter) {
+                case "friends" -> "following";
+                case "following" -> "followers";
+                default -> "friends";
+            };
+            store.markDirty();
+            SettingsDialogs.openFriends(player, profile);
+            return 1;
+        }));
+
+        root = root.then(CommandManager.literal("friendsearch").executes(context -> {
+            SettingsDialogs.openSearch(context.getSource().getPlayerOrThrow());
+            return 1;
+        }));
+
+        root = root.then(CommandManager.literal("finduser")
+                .then(CommandManager.argument("name", StringArgumentType.word())
+                        .executes(context -> findUser(context.getSource().getPlayerOrThrow(),
+                                StringArgumentType.getString(context, "name")))));
+
+        root = root.then(CommandManager.literal("unfollowid")
+                .then(CommandManager.argument("uuid", StringArgumentType.word())
+                        .executes(context -> unfollowId(context.getSource().getPlayerOrThrow(),
+                                StringArgumentType.getString(context, "uuid")))));
+
         root = root.then(CommandManager.literal("cycle")
                 .then(CommandManager.argument("setting", StringArgumentType.word())
                         .suggests((context, builder) -> CommandSource.suggestMatching(SettingsRegistry.ids(), builder))
@@ -41,6 +69,43 @@ public final class SettingsCommands {
                                 StringArgumentType.getString(context, "setting")))));
 
         dispatcher.register(root);
+    }
+
+    /** Unfollow addressed by UUID, so friend-list buttons work for offline players. */
+    private int unfollowId(ServerPlayerEntity player, String uuid) {
+        PlayerProfile profile = store.get(player.getUuid());
+        try {
+            java.util.UUID target = java.util.UUID.fromString(uuid);
+            SocialManager social = TpaCombat.social();
+            String name = social.nameOf(player.getEntityWorld().getServer(), target);
+            if (social.unfollow(player.getUuid(), target)) {
+                player.sendMessage(Messages.withPrefix(
+                        Text.literal("You no longer follow ").formatted(Formatting.YELLOW)
+                                .append(Text.literal(name).formatted(Formatting.WHITE))
+                                .append(Text.literal(".").formatted(Formatting.YELLOW))));
+            }
+        } catch (IllegalArgumentException ignored) {
+            // malformed uuid: fall through and just re-open the list
+        }
+        SettingsDialogs.openFriends(player, profile);
+        return 1;
+    }
+
+    /** Search result: follow the named player if they are online, then return to the list. */
+    private int findUser(ServerPlayerEntity player, String name) {
+        ServerPlayerEntity target = player.getEntityWorld().getServer().getPlayerManager().getPlayer(name);
+        PlayerProfile profile = store.get(player.getUuid());
+        if (target == null) {
+            player.sendMessage(Messages.withPrefix(Messages.playerNotFound(name)));
+        } else if (target.getUuid().equals(player.getUuid())) {
+            player.sendMessage(Messages.withPrefix(
+                    Text.literal("You can't follow yourself.").formatted(Formatting.RED)));
+        } else {
+            player.getEntityWorld().getServer().getCommandManager().parseAndExecute(
+                    player.getCommandSource(), "follow " + target.getGameProfile().name());
+        }
+        SettingsDialogs.openFriends(player, profile);
+        return 1;
     }
 
     private int cycle(ServerPlayerEntity player, String id) {

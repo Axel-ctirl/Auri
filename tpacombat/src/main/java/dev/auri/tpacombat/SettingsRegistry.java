@@ -11,15 +11,17 @@ import java.util.Map;
  */
 public final class SettingsRegistry {
 
-    public record Category(String id, String title, String icon) {
+    /** {@code sprite} is an atlas texture path, rendered inline via the object text component. */
+    public record Category(String id, String title, String sprite) {
     }
 
     private static final List<Category> CATEGORIES = List.of(
-            new Category("chat", "Chat", "💬"),
-            new Category("notifications", "Notifications", "🔔"),
-            new Category("pvp", "PvP", "⚔"),
-            new Category("privacy", "Privacy", "🔒"),
-            new Category("social", "Social", "👥"));
+            new Category("chat", "Chat", "item/oak_sign"),
+            new Category("notifications", "Notifications", "item/bell"),
+            new Category("pvp", "PvP", "item/diamond_sword"),
+            new Category("privacy", "Privacy", "item/barrier"),
+            new Category("general", "General", "item/comparator"),
+            new Category("friends", "Friends", "item/name_tag"));
 
     private static final List<SettingDef> SETTINGS = List.of(
             new SettingDef.Toggle("chat.public", "chat", "Public Chat",
@@ -46,7 +48,14 @@ public final class SettingsRegistry {
                     p -> p.explosionParticles, (p, v) -> p.explosionParticles = v),
 
             new SettingDef.Choice("privacy.tpa", "privacy", "Who Can TPA You",
-                    p -> p.tpaRequests, (p, v) -> p.tpaRequests = v));
+                    p -> p.tpaRequests, (p, v) -> p.tpaRequests = v),
+
+            new SettingDef.Toggle("general.phantoms", "general", "Phantom Spawning",
+                    p -> p.phantomSpawning, (p, v) -> p.phantomSpawning = v),
+            new SettingDef.Toggle("general.pearls", "general", "Keep Ender Pearls On Death",
+                    p -> p.keepEnderPearlsOnDeath, (p, v) -> p.keepEnderPearlsOnDeath = v),
+            new SettingDef.Toggle("general.nightvision", "general", "Night Vision",
+                    p -> p.nightVision, (p, v) -> p.nightVision = v));
 
     private static final Map<String, SettingDef> BY_ID = new LinkedHashMap<>();
 
