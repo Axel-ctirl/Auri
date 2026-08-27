@@ -64,6 +64,28 @@ public final class SettingsCommands {
                         .executes(context -> unfollowId(context.getSource().getPlayerOrThrow(),
                                 StringArgumentType.getString(context, "uuid")))));
 
+        root = root.then(CommandManager.literal("autoaccept").executes(context -> {
+            ServerPlayerEntity player = context.getSource().getPlayerOrThrow();
+            SettingsDialogs.openAutoAccept(player, store.get(player.getUuid()));
+            return 1;
+        }));
+
+        root = root.then(CommandManager.literal("autosearch").executes(context -> {
+            SettingsDialogs.openNameEntry(context.getSource().getPlayerOrThrow(),
+                    "Auto-accept teleport requests from:", "settings autoadd", "settings autoaccept");
+            return 1;
+        }));
+
+        root = root.then(CommandManager.literal("autoadd")
+                .then(CommandManager.argument("name", StringArgumentType.word())
+                        .executes(context -> autoAdd(context.getSource().getPlayerOrThrow(),
+                                StringArgumentType.getString(context, "name")))));
+
+        root = root.then(CommandManager.literal("autoremove")
+                .then(CommandManager.argument("uuid", StringArgumentType.word())
+                        .executes(context -> autoRemove(context.getSource().getPlayerOrThrow(),
+                                StringArgumentType.getString(context, "uuid")))));
+
         root = root.then(CommandManager.literal("open")
                 .then(CommandManager.argument("setting", StringArgumentType.word())
                         .suggests((context, builder) -> CommandSource.suggestMatching(SettingsRegistry.ids(), builder))
@@ -126,6 +148,40 @@ public final class SettingsCommands {
         return setting == null
                 ? builder.buildFuture()
                 : CommandSource.suggestMatching(setting.optionKeys(), builder);
+    }
+
+    private int autoAdd(ServerPlayerEntity player, String name) {
+        PlayerProfile profile = store.get(player.getUuid());
+        ServerPlayerEntity target = player.getEntityWorld().getServer().getPlayerManager().getPlayer(name);
+        if (target == null) {
+            player.sendMessage(Messages.withPrefix(Messages.playerNotFound(name)));
+        } else if (target.getUuid().equals(player.getUuid())) {
+            player.sendMessage(Messages.withPrefix(Messages.autoAddSelf()));
+        } else if (!profile.autoAccept.add(target.getUuid().toString())) {
+            player.sendMessage(Messages.withPrefix(Messages.autoAlready(target.getGameProfile().name())));
+        } else {
+            store.get(target.getUuid()).lastKnownName = target.getGameProfile().name();
+            store.markDirty();
+            player.sendMessage(Messages.withPrefix(Messages.autoAdded(target.getGameProfile().name())));
+        }
+        SettingsDialogs.openAutoAccept(player, profile);
+        return 1;
+    }
+
+    private int autoRemove(ServerPlayerEntity player, String uuid) {
+        PlayerProfile profile = store.get(player.getUuid());
+        if (profile.autoAccept.remove(uuid)) {
+            store.markDirty();
+            try {
+                String name = TpaCombat.social()
+                        .nameOf(player.getEntityWorld().getServer(), java.util.UUID.fromString(uuid));
+                player.sendMessage(Messages.withPrefix(Messages.autoRemoved(name)));
+            } catch (IllegalArgumentException ignored) {
+                // removed anyway; just skip the confirmation text
+            }
+        }
+        SettingsDialogs.openAutoAccept(player, profile);
+        return 1;
     }
 
     private int openSetting(ServerPlayerEntity player, String id) {

@@ -42,8 +42,13 @@ public final class TpaCommands {
         dispatcher.register(CommandManager.literal("tpa")
                 .executes(context -> quickSelect(context.getSource().getPlayerOrThrow()))
                 .then(CommandManager.argument("player", EntityArgumentType.player())
-                        .executes(context -> tpa(context.getSource().getPlayerOrThrow(),
-                                EntityArgumentType.getPlayer(context, "player")))));
+                        .executes(context -> request(context.getSource().getPlayerOrThrow(),
+                                EntityArgumentType.getPlayer(context, "player"), false))));
+
+        dispatcher.register(CommandManager.literal("tpahere")
+                .then(CommandManager.argument("player", EntityArgumentType.player())
+                        .executes(context -> request(context.getSource().getPlayerOrThrow(),
+                                EntityArgumentType.getPlayer(context, "player"), true))));
 
         dispatcher.register(CommandManager.literal("tpaccept")
                 .executes(context -> tpaccept(context.getSource().getPlayerOrThrow())));
@@ -107,7 +112,8 @@ public final class TpaCommands {
         return 1;
     }
 
-    private int tpa(ServerPlayerEntity sender, ServerPlayerEntity target) {
+    /** Shared by /tpa and /tpahere; {@code here} decides who moves once it is accepted. */
+    private int request(ServerPlayerEntity sender, ServerPlayerEntity target, boolean here) {
         if (denyIfInCombat(sender)) {
             return 0;
         }
@@ -122,12 +128,31 @@ public final class TpaCommands {
         }
 
         String targetName = target.getGameProfile().name();
+        String senderName = sender.getGameProfile().name();
+
+        // A hard block always wins, including over auto-accept.
         if (tpa.blocks().isBlocked(target.getUuid(), sender.getUuid())) {
             Messages.actionBar(sender, Messages.tpaBlockedByTarget(targetName));
             return 0;
         }
-        // The privacy setting is a broader filter that sits in front of the explicit block list.
-        Visibility visibility = store.peek(target.getUuid()).tpaRequests;
+
+        PlayerProfile targetProfile = store.peek(target.getUuid());
+
+        // Auto-accept is an explicit, manually built list, so it bypasses the privacy filter --
+        // but not the block list above, and not the combat checks below.
+        if (targetProfile.autoAccept.contains(sender.getUuid().toString())) {
+            ServerPlayerEntity mover = here ? target : sender;
+            if (combat.isTagged(mover)) {
+                Messages.actionBar(sender, Messages.tpaRequesterInCombat(mover.getGameProfile().name()));
+                return 0;
+            }
+            Messages.actionBar(sender, Messages.tpaAutoAccepted(targetName));
+            Messages.actionBar(target, Messages.tpaAutoAcceptedByYou(senderName));
+            tpa.startWarmup(mover, here ? sender : target);
+            return 1;
+        }
+
+        Visibility visibility = targetProfile.tpaRequests;
         if (!visibility.allows(social, target.getUuid(), sender.getUuid())) {
             Messages.actionBar(sender, Messages.tpaPrivacyBlocked(targetName, visibility));
             return 0;
@@ -137,13 +162,18 @@ public final class TpaCommands {
             return 0;
         }
 
-        tpa.addRequest(sender, target);
+        tpa.addRequest(sender, target, here);
         int seconds = tpa.timeoutSeconds();
-        String senderName = sender.getGameProfile().name();
-        Messages.actionBar(sender, Messages.tpaSent(targetName, seconds));
-        if (store.peek(target.getUuid()).tpaAlerts) {
-            Messages.chat(target, Messages.withPrefix(Messages.tpaReceived(senderName, seconds)));
-            Messages.actionBar(target, Messages.tpaReceivedBar(senderName));
+        Messages.actionBar(sender, here
+                ? Messages.tpaHereSent(targetName, seconds)
+                : Messages.tpaSent(targetName, seconds));
+        if (targetProfile.tpaAlerts) {
+            Messages.chat(target, Messages.withPrefix(here
+                    ? Messages.tpaHereReceived(senderName, seconds)
+                    : Messages.tpaReceived(senderName, seconds)));
+            Messages.actionBar(target, here
+                    ? Messages.tpaHereReceivedBar(senderName)
+                    : Messages.tpaReceivedBar(senderName));
         }
         return 1;
     }
@@ -164,17 +194,21 @@ public final class TpaCommands {
             Messages.actionBar(target, Messages.tpaNonePending());
             return 0;
         }
-        // Leave the request queued so the requester can still be accepted once they are out of combat.
-        if (combat.isTagged(requester)) {
-            Messages.actionBar(target, Messages.tpaRequesterInCombat(requester.getGameProfile().name()));
-            combat.sendInCombat(requester);
+        // For /tpahere the accepting player is the one who moves, so they are the one checked.
+        ServerPlayerEntity mover = request.here() ? target : requester;
+        ServerPlayerEntity destination = request.here() ? requester : target;
+
+        // Leave the request queued so it can still be accepted once they are out of combat.
+        if (combat.isTagged(mover)) {
+            Messages.actionBar(target, Messages.tpaRequesterInCombat(mover.getGameProfile().name()));
+            combat.sendInCombat(mover);
             return 0;
         }
 
         tpa.pollLatest(target);
         Messages.actionBar(requester, Messages.tpaAcceptRequester(target.getGameProfile().name()));
         Messages.actionBar(target, Messages.tpaAcceptTarget(requester.getGameProfile().name()));
-        tpa.startWarmup(requester, target);
+        tpa.startWarmup(mover, destination);
         return 1;
     }
 

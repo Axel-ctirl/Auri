@@ -84,6 +84,53 @@ public final class Messages {
                 c(killer, Formatting.WHITE), c(" and paid the price!", Formatting.RED));
     }
 
+    public static Text tpaHereSent(String player, int seconds) {
+        return seq(c("TPAHERE sent to ", Formatting.GREEN), c(player, Formatting.WHITE), c(" ", Formatting.GREEN),
+                c("(expires in " + seconds + "s)", Formatting.GRAY));
+    }
+
+    public static Text tpaHereReceivedBar(String player) {
+        return seq(c(player, Formatting.WHITE), c(" wants you to TP to them", Formatting.GOLD));
+    }
+
+    public static Text tpaHereReceived(String player, int seconds) {
+        MutableText accept = Text.literal("[Accept]").styled(style -> style
+                .withColor(Formatting.GREEN).withBold(Boolean.TRUE)
+                .withClickEvent(new ClickEvent.RunCommand("/tpaccept")));
+        MutableText deny = Text.literal("[Deny]").styled(style -> style
+                .withColor(Formatting.RED).withBold(Boolean.TRUE)
+                .withClickEvent(new ClickEvent.RunCommand("/tpdeny")));
+        return seq(c(player, Formatting.WHITE), c(" wants you to TP to them. ", Formatting.GOLD), accept,
+                c(" ", Formatting.GOLD), deny, c(" (" + seconds + "s)", Formatting.GRAY));
+    }
+
+    public static Text tpaAutoAccepted(String player) {
+        return seq(c(player, Formatting.WHITE), c(" auto-accepted your request.", Formatting.GREEN));
+    }
+
+    public static Text tpaAutoAcceptedByYou(String player) {
+        return seq(c("Auto-accepted ", Formatting.GREEN), c(player, Formatting.WHITE),
+                c("'s request.", Formatting.GREEN));
+    }
+
+    public static Text autoAddSelf() {
+        return c("You can't auto-accept yourself.", Formatting.RED);
+    }
+
+    public static Text autoAdded(String player) {
+        return seq(c(player, Formatting.WHITE),
+                c("'s teleport requests will now be accepted automatically.", Formatting.GREEN));
+    }
+
+    public static Text autoAlready(String player) {
+        return seq(c(player, Formatting.WHITE), c(" is already auto-accepted.", Formatting.RED));
+    }
+
+    public static Text autoRemoved(String player) {
+        return seq(c(player, Formatting.WHITE),
+                c(" will be asked about again.", Formatting.YELLOW));
+    }
+
     public static Text tpaSelf() {
         return c("You can't send a teleport request to yourself.", Formatting.RED);
     }

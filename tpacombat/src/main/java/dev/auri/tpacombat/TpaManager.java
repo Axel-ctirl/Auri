@@ -63,10 +63,10 @@ public final class TpaManager {
         return queue != null && queue.stream().anyMatch(r -> r.requester().equals(requester.getUuid()));
     }
 
-    public void addRequest(ServerPlayerEntity requester, ServerPlayerEntity target) {
+    public void addRequest(ServerPlayerEntity requester, ServerPlayerEntity target, boolean here) {
         pending.computeIfAbsent(target.getUuid(), k -> new ArrayDeque<>())
                 .addLast(new Request(requester.getUuid(), requester.getGameProfile().name(),
-                        System.currentTimeMillis() + timeoutMillis()));
+                        System.currentTimeMillis() + timeoutMillis(), here));
     }
 
     public Request peekLatest(ServerPlayerEntity target) {
@@ -93,16 +93,17 @@ public final class TpaManager {
         }
     }
 
-    public void startWarmup(ServerPlayerEntity requester, ServerPlayerEntity target) {
-        cancelWarmup(requester.getUuid());
+    /** {@code mover} is whoever is being teleported; for /tpahere that is the accepting player. */
+    public void startWarmup(ServerPlayerEntity mover, ServerPlayerEntity destination) {
+        cancelWarmup(mover.getUuid());
         int delay = Config.get().tpa.teleportDelaySeconds;
         if (delay == 0) {
-            completeTeleport(requester, target);
+            completeTeleport(mover, destination);
             return;
         }
-        Warmup warmup = new Warmup(requester, target, delay);
-        warmup.showCountdown(requester);
-        warmups.put(requester.getUuid(), warmup);
+        Warmup warmup = new Warmup(mover, destination, delay);
+        warmup.showCountdown(mover);
+        warmups.put(mover.getUuid(), warmup);
     }
 
     public void onEndTick(MinecraftServer server) {
@@ -118,11 +119,11 @@ public final class TpaManager {
         }
     }
 
-    private void completeTeleport(ServerPlayerEntity requester, ServerPlayerEntity target) {
-        ServerWorld world = target.getEntityWorld();
-        requester.teleport(world, target.getX(), target.getY(), target.getZ(), Set.of(),
-                target.getYaw(), target.getPitch(), true);
-        Messages.actionBar(requester, Messages.tpaTeleported(target.getGameProfile().name()));
+    private void completeTeleport(ServerPlayerEntity mover, ServerPlayerEntity destination) {
+        ServerWorld world = destination.getEntityWorld();
+        mover.teleport(world, destination.getX(), destination.getY(), destination.getZ(), Set.of(),
+                destination.getYaw(), destination.getPitch(), true);
+        Messages.actionBar(mover, Messages.tpaTeleported(destination.getGameProfile().name()));
     }
 
     public void cancelWarmup(UUID requesterId) {
@@ -160,7 +161,11 @@ public final class TpaManager {
         cooldowns.clear();
     }
 
-    public record Request(UUID requester, String requesterName, long expiresAt) {
+    /**
+     * {@code here} distinguishes /tpahere from /tpa: it decides which of the two players moves
+     * when the request is accepted.
+     */
+    public record Request(UUID requester, String requesterName, long expiresAt, boolean here) {
         public boolean expired() {
             return expiresAt <= System.currentTimeMillis();
         }
@@ -168,67 +173,67 @@ public final class TpaManager {
 
     private final class Warmup {
 
-        private final UUID requesterId;
-        private final UUID targetId;
-        private final String targetName;
+        private final UUID moverId;
+        private final UUID destinationId;
+        private final String destinationName;
         private final RegistryKey<World> startDimension;
         private final BlockPos startPos;
         private final boolean cancelOnMove;
         private int secondsLeft;
 
-        Warmup(ServerPlayerEntity requester, ServerPlayerEntity target, int seconds) {
-            this.requesterId = requester.getUuid();
-            this.targetId = target.getUuid();
-            this.targetName = target.getGameProfile().name();
-            this.startDimension = requester.getEntityWorld().getRegistryKey();
-            this.startPos = requester.getBlockPos();
+        Warmup(ServerPlayerEntity mover, ServerPlayerEntity destination, int seconds) {
+            this.moverId = mover.getUuid();
+            this.destinationId = destination.getUuid();
+            this.destinationName = destination.getGameProfile().name();
+            this.startDimension = mover.getEntityWorld().getRegistryKey();
+            this.startPos = mover.getBlockPos();
             this.cancelOnMove = Config.get().tpa.cancelOnMove;
             this.secondsLeft = seconds;
         }
 
         void tick(MinecraftServer server) {
-            ServerPlayerEntity requester = server.getPlayerManager().getPlayer(requesterId);
-            if (requester == null || requester.isDead()) {
-                cancelWarmup(requesterId);
+            ServerPlayerEntity mover = server.getPlayerManager().getPlayer(moverId);
+            if (mover == null || mover.isDead()) {
+                cancelWarmup(moverId);
                 return;
             }
-            ServerPlayerEntity target = server.getPlayerManager().getPlayer(targetId);
-            if (target == null) {
-                abort(requester, Messages.tpaCancelledOffline(targetName), false);
+            ServerPlayerEntity destination = server.getPlayerManager().getPlayer(destinationId);
+            if (destination == null) {
+                abort(mover, Messages.tpaCancelledOffline(destinationName), false);
                 return;
             }
-            if (cancelOnMove && movedFrom(requester)) {
-                abort(requester, Messages.tpaCancelledMoved(), true);
+            if (cancelOnMove && movedFrom(mover)) {
+                abort(mover, Messages.tpaCancelledMoved(), true);
                 return;
             }
-            if (combat.isTagged(requester)) {
-                abort(requester, Messages.tpaCancelledCombat(), true);
+            if (combat.isTagged(mover)) {
+                abort(mover, Messages.tpaCancelledCombat(), true);
                 return;
             }
 
             if (--secondsLeft <= 0) {
-                cancelWarmup(requesterId);
-                completeTeleport(requester, target);
+                cancelWarmup(moverId);
+                completeTeleport(mover, destination);
             } else {
-                showCountdown(requester);
+                showCountdown(mover);
             }
         }
 
-        void showCountdown(ServerPlayerEntity requester) {
-            Messages.actionBar(requester, Messages.tpaWarmup(secondsLeft));
+        void showCountdown(ServerPlayerEntity mover) {
+            Messages.actionBar(mover, Messages.tpaWarmup(secondsLeft));
         }
 
-        private boolean movedFrom(ServerPlayerEntity requester) {
-            return !requester.getEntityWorld().getRegistryKey().equals(startDimension)
-                    || !requester.getBlockPos().equals(startPos);
+        private boolean movedFrom(ServerPlayerEntity mover) {
+            return !mover.getEntityWorld().getRegistryKey().equals(startDimension)
+                    || !mover.getBlockPos().equals(startPos);
         }
 
         /** Moving or getting hit is the player's own doing, so those two apply the cooldown. */
-        private void abort(ServerPlayerEntity requester, Text message, boolean selfInflicted) {
-            Messages.actionBar(requester, message);
-            cancelWarmup(requesterId);
+        private void abort(ServerPlayerEntity mover, Text message, boolean selfInflicted) {
+            Messages.actionBar(mover, message);
+            cancelWarmup(moverId);
             if (selfInflicted) {
-                applyCancelCooldown(requesterId);
+                applyCancelCooldown(moverId);
             }
         }
     }

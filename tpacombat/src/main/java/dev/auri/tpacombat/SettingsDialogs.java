@@ -120,6 +120,74 @@ public final class SettingsDialogs {
                 2));
     }
 
+    /**
+     * The manually built auto-accept list. Entries are addressed by UUID so offline players can be
+     * removed, matching the friends list.
+     */
+    public static void openAutoAccept(ServerPlayerEntity player, PlayerProfile profile) {
+        MinecraftServer server = player.getEntityWorld().getServer();
+        SocialManager social = TpaCombat.social();
+
+        List<DialogActionButtonData> buttons = new ArrayList<>();
+        for (String raw : profile.autoAccept) {
+            UUID id;
+            try {
+                id = UUID.fromString(raw);
+            } catch (IllegalArgumentException ignored) {
+                continue;
+            }
+            String name = social.nameOf(server, id);
+            ServerPlayerEntity online = server.getPlayerManager().getPlayer(id);
+            MutableText label = Text.empty();
+            if (online != null) {
+                label.append(Icons.head(online.getGameProfile())).append(Text.literal(" "));
+            }
+            label.append(Text.literal(name).formatted(online != null ? Formatting.WHITE : Formatting.GRAY));
+            buttons.add(plainButton(label, "Click to remove from auto accept",
+                    "settings autoremove " + id));
+        }
+
+        buttons.add(plainButton(Text.literal("+ Add Player").formatted(Formatting.GREEN),
+                "Auto-accept a player's teleport requests", "settings autosearch"));
+
+        MutableText counts = Text.empty()
+                .append(Text.literal(profile.autoAccept.size() + " auto-accepted").formatted(Formatting.WHITE));
+
+        open(player, new MultiActionDialog(
+                common(title(), List.of(
+                        new PlainMessageDialogBody(counts, 260),
+                        new PlainMessageDialogBody(Text.literal(
+                                "Their /tpa and /tpahere are accepted without asking.")
+                                .formatted(Formatting.GRAY), 260))),
+                buttons,
+                Optional.of(backButton("settings privacy")),
+                2));
+    }
+
+    /** Name entry used by both the friends search and the auto-accept list. */
+    public static void openNameEntry(ServerPlayerEntity player, String prompt, String command,
+                                     String cancelCommand) {
+        DialogInput input = new DialogInput("player_name",
+                new TextInputControl(300, Text.literal("Player name").formatted(Formatting.WHITE),
+                        true, "", 16, Optional.empty()));
+
+        DialogActionButtonData confirm = new DialogActionButtonData(
+                new DialogButtonData(Text.literal("Confirm").formatted(Formatting.GREEN), Optional.empty(), 200),
+                template(command + " $(player_name)"));
+        DialogActionButtonData cancel = new DialogActionButtonData(
+                new DialogButtonData(Text.literal("Cancel").formatted(Formatting.RED), Optional.empty(), 200),
+                Optional.of(new SimpleDialogAction(new ClickEvent.RunCommand(cancelCommand))));
+
+        DialogCommonData common = new DialogCommonData(
+                title(), Optional.of(Text.literal("Settings")), true, false,
+                AfterAction.WAIT_FOR_RESPONSE,
+                List.<DialogBody>of(new PlainMessageDialogBody(
+                        Text.literal(prompt).formatted(Formatting.GRAY), 260)),
+                List.of(input));
+
+        open(player, new MultiActionDialog(common, List.of(confirm, cancel), Optional.empty(), 2));
+    }
+
     /** The name-entry screen behind Search and + Follow. */
     public static void openSearch(ServerPlayerEntity player) {
         DialogInput input = new DialogInput("player_name",

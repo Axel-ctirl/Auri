@@ -35,6 +35,9 @@ public final class PlayerProfile {
     // Social — UUID strings so GSON round-trips them without a custom adapter.
     public Set<String> following = new LinkedHashSet<>();
 
+    /** Players whose teleport requests are accepted without asking. Added by hand only. */
+    public Set<String> autoAccept = new LinkedHashSet<>();
+
     /** Which list the Friends tab is showing: friends, following or followers. */
     public String friendsFilter = "friends";
 
@@ -51,6 +54,9 @@ public final class PlayerProfile {
         }
         if (following == null) {
             following = new LinkedHashSet<>();
+        }
+        if (autoAccept == null) {
+            autoAccept = new LinkedHashSet<>();
         }
         if (lastKnownName == null) {
             lastKnownName = "";

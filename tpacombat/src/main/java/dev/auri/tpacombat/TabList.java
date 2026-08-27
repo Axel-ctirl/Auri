@@ -58,7 +58,7 @@ public final class TabList {
         Formatting accent = parseColor(settings.accentColor, Formatting.RED);
 
         MutableText header = Text.empty()
-                .append(Text.literal(settings.serverName).formatted(accent, Formatting.BOLD))
+                .append(Text.literal(settings.serverName).formatted(accent))
                 .append(Text.literal("\n"))
                 .append(Text.literal(playerCount + (playerCount == 1 ? " Player" : " Players"))
                         .formatted(Formatting.WHITE));

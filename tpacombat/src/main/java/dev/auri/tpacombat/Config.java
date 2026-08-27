@@ -63,7 +63,7 @@ public final class Config {
         /** First header line, shown bold in the accent colour. */
         public String serverName = "Exploit Smp";
         /** Command hints listed in the footer. */
-        public List<String> commands = new ArrayList<>(List.of("/gotorift", "/maces", "/tps"));
+        public List<String> commands = new ArrayList<>(List.of("/maces", "/tpa"));
         /** Named Minecraft colour for the server name and the footer. */
         public String accentColor = "red";
         /** How often to check whether the player count changed, in ticks. 20 = once a second. */

@@ -30,7 +30,8 @@ The mod declares `"environment": "server"`. Vanilla clients can join a server ru
 | Command | Effect |
 | --- | --- |
 | `/tpa` | Lists everyone online as clickable `[Name]` buttons that send them a request. |
-| `/tpa <player>` | Sends a teleport request. |
+| `/tpa <player>` | Asks to teleport to them. |
+| `/tpahere <player>` | Asks them to teleport to you. |
 | `/tpaccept` | Accepts your most recent pending request. |
 | `/tpdeny` | Denies your most recent pending request. |
 | `/tpablock <player>` | Blocks a player from sending you requests, dropping any they have pending. |
@@ -58,7 +59,14 @@ back to a generic death. Deaths are announced server-wide when `broadcastCombatL
 A server stop or restart is **never** punished — the stopping flag is set before players are
 kicked.
 
-**Teleporting.** After `/tpaccept` the requester gets a `teleportDelaySeconds` countdown on the
+**Auto accept.** Privacy holds an **Auto Accept List** you build by hand. A request from someone on
+it skips the prompt entirely and starts the countdown immediately, for both `/tpa` and `/tpahere`.
+It bypasses the privacy filter, since putting someone on the list is an explicit decision — but it
+never overrides `/tpablock`, and the player who is about to move is still combat-checked, so it
+cannot be used to teleport out of a fight.
+
+**Teleporting.** `/tpa` moves the requester; `/tpahere` moves whoever accepts. After `/tpaccept` the
+mover gets a `teleportDelaySeconds` countdown on the
 action bar. Walking to a different block or entering combat cancels it and applies
 `cancelCooldownSeconds` before they can send another request. The target going offline also
 cancels it, but is not the requester's fault, so no cooldown is applied. Requests expire after
@@ -234,6 +242,8 @@ clamped to the same ranges the original Forge config enforced.
 | `tablist.enabled` | Show the custom tab list header and footer. |
 | `tablist.serverName` | First header line, bold in the accent colour. |
 | `tablist.commands` | Command hints listed in the footer. Any number of entries. |
+
+The server name is drawn in the accent colour, not bold.
 | `tablist.accentColor` | Named Minecraft colour, e.g. `red`, `gold`, `aqua`. Bad names fall back to red. |
 | `tablist.refreshTicks` | How often to check for a player-count change. 20 = once a second. 1–1200. |
 
