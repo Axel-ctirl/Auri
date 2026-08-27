@@ -93,13 +93,14 @@ This uses vanilla **dialogs**, added to Minecraft in 1.21.6 — a server-driven 
 clients render natively. It is not a chest GUI and not a Paper-only feature; Paper's Dialog API is
 just a plugin-facing wrapper over the same system.
 
-`/settings` opens a category grid; picking one shows just that category's settings, one per row,
-with a **← Back** button. Navigation and values are never mixed into the same list.
+`/settings` opens a category grid; picking one shows just that category's settings, one per row.
+Picking a setting opens **its own screen**, listing every value that setting can take with the
+active one ticked. Choosing a value applies it and returns you to the category. Every screen has a
+**← Back** button, and navigation is never mixed in with values.
 
 The menu is built per player at the moment it opens (via `RegistryEntry.of`, not a registered
-static dialog), which is what lets each row show that player's current value. Clicking a row
-cycles it and re-opens the menu, so it reads as toggling in place. Toggles that change world
-state are applied the instant they are clicked rather than on the next sweep.
+static dialog), which is what lets each row show that player's current value. Toggles that change
+world state are applied the instant they are chosen rather than on the next sweep.
 
 Category buttons carry real item textures rather than unicode, using the `object` text component
 added in 1.21.9. The same mechanism draws player heads beside names in the Friends list.
@@ -133,7 +134,7 @@ no error logged anywhere — the dialog still loads fine.
 | Friends | follow list, filter and search | |
 
 Everything is also reachable from chat: `/settings`, `/settings <category>`,
-`/settings cycle <setting>`.
+`/settings open <setting>` and `/settings set <setting> <value>`, both with tab completion.
 
 Settings are stored per player at `<world>/data/tpacombat_players.json`, flushed about once a
 minute and on shutdown.

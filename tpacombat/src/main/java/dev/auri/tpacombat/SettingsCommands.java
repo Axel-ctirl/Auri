@@ -64,11 +64,20 @@ public final class SettingsCommands {
                         .executes(context -> unfollowId(context.getSource().getPlayerOrThrow(),
                                 StringArgumentType.getString(context, "uuid")))));
 
-        root = root.then(CommandManager.literal("cycle")
+        root = root.then(CommandManager.literal("open")
                 .then(CommandManager.argument("setting", StringArgumentType.word())
                         .suggests((context, builder) -> CommandSource.suggestMatching(SettingsRegistry.ids(), builder))
-                        .executes(context -> cycle(context.getSource().getPlayerOrThrow(),
+                        .executes(context -> openSetting(context.getSource().getPlayerOrThrow(),
                                 StringArgumentType.getString(context, "setting")))));
+
+        root = root.then(CommandManager.literal("set")
+                .then(CommandManager.argument("setting", StringArgumentType.word())
+                        .suggests((context, builder) -> CommandSource.suggestMatching(SettingsRegistry.ids(), builder))
+                        .then(CommandManager.argument("value", StringArgumentType.word())
+                                .suggests(SettingsCommands::suggestValues)
+                                .executes(context -> setValue(context.getSource().getPlayerOrThrow(),
+                                        StringArgumentType.getString(context, "setting"),
+                                        StringArgumentType.getString(context, "value"))))));
 
         dispatcher.register(root);
     }
@@ -110,20 +119,48 @@ public final class SettingsCommands {
         return 1;
     }
 
-    private int cycle(ServerPlayerEntity player, String id) {
+    private static java.util.concurrent.CompletableFuture<com.mojang.brigadier.suggestion.Suggestions>
+            suggestValues(com.mojang.brigadier.context.CommandContext<ServerCommandSource> context,
+                          com.mojang.brigadier.suggestion.SuggestionsBuilder builder) {
+        SettingDef setting = SettingsRegistry.byId(StringArgumentType.getString(context, "setting"));
+        return setting == null
+                ? builder.buildFuture()
+                : CommandSource.suggestMatching(setting.optionKeys(), builder);
+    }
+
+    private int openSetting(ServerPlayerEntity player, String id) {
         SettingDef setting = SettingsRegistry.byId(id);
         if (setting == null) {
-            player.sendMessage(Messages.withPrefix(
-                    Text.literal("Unknown setting: " + id).formatted(Formatting.RED)));
-            return 0;
+            return unknown(player, id);
+        }
+        SettingsDialogs.openSetting(player, store.get(player.getUuid()), setting);
+        return 1;
+    }
+
+    private int setValue(ServerPlayerEntity player, String id, String value) {
+        SettingDef setting = SettingsRegistry.byId(id);
+        if (setting == null) {
+            return unknown(player, id);
         }
         PlayerProfile profile = store.get(player.getUuid());
-        setting.cycle(profile);
+        if (!setting.apply(profile, value)) {
+            player.sendMessage(Messages.withPrefix(Text.literal(
+                    "\"" + value + "\" is not a value for " + setting.label() + ".")
+                    .formatted(Formatting.RED)));
+            SettingsDialogs.openSetting(player, profile, setting);
+            return 0;
+        }
         store.markDirty();
         // Night vision and phantom suppression otherwise wait for the next sweep, which reads as lag.
         effects.applyNow(player);
-        // Re-open the same category so the client's waiting screen resolves into the updated menu.
+        // Back to the category, so choosing a value returns you to where you came from.
         SettingsDialogs.openCategory(player, profile, setting.category());
         return 1;
+    }
+
+    private int unknown(ServerPlayerEntity player, String id) {
+        player.sendMessage(Messages.withPrefix(
+                Text.literal("Unknown setting: " + id).formatted(Formatting.RED)));
+        return 0;
     }
 }

@@ -188,9 +188,46 @@ public final class SettingsDialogs {
                 .append(Text.literal(setting.label() + ": ").formatted(Formatting.WHITE))
                 .append(setting.valueText(profile));
         DialogButtonData button = new DialogButtonData(label,
-                Optional.of(Text.literal("Click to toggle").formatted(Formatting.GRAY)), BUTTON_WIDTH);
+                Optional.of(Text.literal(setting.description()).formatted(Formatting.GRAY)), BUTTON_WIDTH);
         return new DialogActionButtonData(button,
-                Optional.of(new SimpleDialogAction(new ClickEvent.RunCommand("settings cycle " + setting.id()))));
+                Optional.of(new SimpleDialogAction(new ClickEvent.RunCommand("settings open " + setting.id()))));
+    }
+
+    /**
+     * One screen per setting, listing every value it can take. The value in force is marked and
+     * has no action, so clicking it cannot be mistaken for a change.
+     */
+    public static void openSetting(ServerPlayerEntity player, PlayerProfile profile, SettingDef setting) {
+        String current = setting.currentKey(profile);
+        List<DialogActionButtonData> buttons = new ArrayList<>();
+        for (String key : setting.optionKeys()) {
+            boolean selected = key.equals(current);
+            MutableText label = Text.empty()
+                    .append(Text.literal(selected ? "\u2714 " : "  ").formatted(Formatting.GREEN))
+                    .append(setting.optionLabel(key));
+            DialogButtonData button = new DialogButtonData(label,
+                    Optional.of(Text.literal(selected ? "Currently selected" : "Click to select")
+                            .formatted(Formatting.GRAY)),
+                    BUTTON_WIDTH);
+            buttons.add(new DialogActionButtonData(button, selected
+                    ? Optional.empty()
+                    : Optional.of(new SimpleDialogAction(
+                            new ClickEvent.RunCommand("settings set " + setting.id() + " " + key)))));
+        }
+
+        SettingsRegistry.Category category = SettingsRegistry.category(setting.category());
+        List<DialogBody> body = List.of(
+                new PlainMessageDialogBody(Text.empty()
+                        .append(category == null ? Text.empty() : Icons.item(category.sprite()))
+                        .append(Text.literal(" " + setting.label()).formatted(Formatting.WHITE)), 260),
+                new PlainMessageDialogBody(
+                        Text.literal(setting.description()).formatted(Formatting.GRAY), 260));
+
+        open(player, new MultiActionDialog(
+                common(title(), body),
+                buttons,
+                Optional.of(backButton("settings " + setting.category())),
+                1));
     }
 
     private static DialogActionButtonData navButton(SettingsRegistry.Category category) {
@@ -212,10 +249,14 @@ public final class SettingsDialogs {
     }
 
     private static DialogActionButtonData backButton() {
+        return backButton("settings");
+    }
+
+    private static DialogActionButtonData backButton(String command) {
         return new DialogActionButtonData(
                 new DialogButtonData(Text.literal("\u2190 Back").formatted(Formatting.GRAY),
                         Optional.empty(), 200),
-                Optional.of(new SimpleDialogAction(new ClickEvent.RunCommand("settings"))));
+                Optional.of(new SimpleDialogAction(new ClickEvent.RunCommand(command))));
     }
 
     private static DialogActionButtonData closeButton() {
