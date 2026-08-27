@@ -53,25 +53,37 @@ public final class SettingsDialogs {
             return;
         }
 
+        // One category per screen, one setting per row: values are never mixed in with navigation.
         List<DialogActionButtonData> buttons = new ArrayList<>();
         for (SettingDef setting : SettingsRegistry.inCategory(categoryId)) {
             buttons.add(settingButton(setting, profile));
         }
-        for (SettingsRegistry.Category other : SettingsRegistry.categories()) {
-            if (!other.id().equals(categoryId)) {
-                buttons.add(navButton(other));
-            }
+        if (categoryId.equals("privacy")) {
+            buttons.add(plainButton(
+                    Text.literal("Auto Accept List").formatted(Formatting.WHITE),
+                    "Players whose teleport requests skip the prompt",
+                    "settings autoaccept"));
         }
 
         open(player, new MultiActionDialog(
                 common(title(), List.of(header(category))),
                 buttons,
-                Optional.of(closeButton()),
-                2));
+                Optional.of(backButton()),
+                1));
     }
 
+    /** The landing screen: just the categories, two to a row. */
     public static void openRoot(ServerPlayerEntity player, PlayerProfile profile) {
-        openCategory(player, profile, SettingsRegistry.categories().get(0).id());
+        List<DialogActionButtonData> buttons = new ArrayList<>();
+        for (SettingsRegistry.Category category : SettingsRegistry.categories()) {
+            buttons.add(navButton(category));
+        }
+        open(player, new MultiActionDialog(
+                common(title(), List.of(new PlainMessageDialogBody(
+                        Text.literal("Choose a category").formatted(Formatting.GRAY), 260))),
+                buttons,
+                Optional.of(closeButton()),
+                2));
     }
 
     // ------------------------------------------------------------------ friends

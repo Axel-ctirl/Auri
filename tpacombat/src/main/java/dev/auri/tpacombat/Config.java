@@ -70,6 +70,13 @@ public final class Config {
         public int refreshTicks = 20;
     }
 
+    /**
+     * The footer hints shipped before /gotorift was dropped and /tps corrected to /tpa. A config
+     * still holding exactly this list was never edited, so it is safe to move it forward; anything
+     * customised is left alone.
+     */
+    private static final List<String> LEGACY_COMMANDS = List.of("/gotorift", "/maces", "/tps");
+
     private static volatile Config instance = new Config();
 
     public static Config get() {
@@ -104,6 +111,7 @@ public final class Config {
             if (loaded.tablist.commands == null) {
                 loaded.tablist.commands = new ArrayList<>();
             }
+            loaded.migrate();
             loaded.clamp();
             instance = loaded;
         } catch (Exception e) {
@@ -122,6 +130,13 @@ public final class Config {
             }
         } catch (IOException e) {
             LOGGER.error("Failed to write {}", path, e);
+        }
+    }
+
+    /** Moves untouched old defaults forward so shipped changes are not stranded in an old file. */
+    private void migrate() {
+        if (LEGACY_COMMANDS.equals(tablist.commands)) {
+            tablist.commands = new ArrayList<>(new TabListSettings().commands);
         }
     }
 
