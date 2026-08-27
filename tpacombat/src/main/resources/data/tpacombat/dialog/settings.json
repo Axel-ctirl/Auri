@@ -16,7 +16,7 @@
   "actions": [
     {
       "label": [
-        { "object": "atlas", "sprite": "minecraft:item/oak_sign" },
+        { "object": "atlas", "atlas": "minecraft:items", "sprite": "minecraft:item/oak_sign" },
         { "text": " Chat", "color": "white" }
       ],
       "tooltip": { "text": "Chat and message visibility", "color": "gray" },
@@ -25,7 +25,7 @@
     },
     {
       "label": [
-        { "object": "atlas", "sprite": "minecraft:item/bell" },
+        { "object": "atlas", "atlas": "minecraft:items", "sprite": "minecraft:item/bell" },
         { "text": " Notifications", "color": "white" }
       ],
       "tooltip": { "text": "TPA and combat alerts", "color": "gray" },
@@ -34,7 +34,7 @@
     },
     {
       "label": [
-        { "object": "atlas", "sprite": "minecraft:item/diamond_sword" },
+        { "object": "atlas", "atlas": "minecraft:items", "sprite": "minecraft:item/diamond_sword" },
         { "text": " PvP", "color": "white" }
       ],
       "tooltip": { "text": "Totem and explosion particles", "color": "gray" },
@@ -43,7 +43,7 @@
     },
     {
       "label": [
-        { "object": "atlas", "sprite": "minecraft:item/barrier" },
+        { "object": "atlas", "atlas": "minecraft:items", "sprite": "minecraft:item/barrier" },
         { "text": " Privacy", "color": "white" }
       ],
       "tooltip": { "text": "Who can send you teleport requests", "color": "gray" },
@@ -52,7 +52,7 @@
     },
     {
       "label": [
-        { "object": "atlas", "sprite": "minecraft:item/comparator" },
+        { "object": "atlas", "atlas": "minecraft:items", "sprite": "minecraft:item/comparator" },
         { "text": " General", "color": "white" }
       ],
       "tooltip": { "text": "Phantoms, ender pearls and night vision", "color": "gray" },
@@ -61,7 +61,7 @@
     },
     {
       "label": [
-        { "object": "atlas", "sprite": "minecraft:item/name_tag" },
+        { "object": "atlas", "atlas": "minecraft:items", "sprite": "minecraft:item/name_tag" },
         { "text": " Friends", "color": "white" }
       ],
       "tooltip": { "text": "Followers, following and friends", "color": "gray" },

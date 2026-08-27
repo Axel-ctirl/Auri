@@ -98,8 +98,17 @@ static dialog), which is what lets each row show that player's current value. Cl
 cycles it and re-opens the menu, so it reads as toggling in place.
 
 Category buttons carry real item textures rather than unicode, using the `object` text component
-added in 1.21.9 (`{"object": "atlas", "sprite": "minecraft:item/..."}`). The same mechanism draws
-player heads beside names in the Friends list.
+added in 1.21.9. The same mechanism draws player heads beside names in the Friends list.
+
+Item sprites **must** name the `minecraft:items` atlas explicitly:
+
+```json
+{ "object": "atlas", "atlas": "minecraft:items", "sprite": "minecraft:item/bell" }
+```
+
+The default atlas for an object component is `minecraft:blocks`, whose `blocks.json` only sources
+the `block/` directory. An item sprite looked up there resolves to nothing and renders blank, with
+no error logged anywhere — the dialog still loads fine.
 
 | Category | Setting | Values |
 | --- | --- | --- |

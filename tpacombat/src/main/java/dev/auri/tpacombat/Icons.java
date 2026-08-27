@@ -6,6 +6,7 @@ import net.minecraft.text.MutableText;
 import net.minecraft.text.ObjectTextContent;
 import net.minecraft.text.object.AtlasTextObjectContents;
 import net.minecraft.text.object.PlayerTextObjectContents;
+import net.minecraft.util.Atlases;
 import net.minecraft.util.Identifier;
 
 /**
@@ -18,10 +19,23 @@ public final class Icons {
     private Icons() {
     }
 
-    /** {@code sprite} is a texture path such as {@code item/diamond_sword}. */
+    /**
+     * {@code sprite} is a texture path such as {@code item/diamond_sword}.
+     *
+     * <p>Item textures live in the {@code minecraft:items} atlas, not the {@code minecraft:blocks}
+     * atlas that {@link AtlasTextObjectContents#DEFAULT_ATLAS} points at -- blocks.json only
+     * sources the {@code block/} directory, so an item sprite looked up there resolves to nothing
+     * and renders blank.
+     */
     public static MutableText item(String sprite) {
         return MutableText.of(new ObjectTextContent(new AtlasTextObjectContents(
-                AtlasTextObjectContents.DEFAULT_ATLAS, Identifier.ofVanilla(sprite))));
+                Atlases.ITEMS, Identifier.ofVanilla(sprite))));
+    }
+
+    /** Block textures, which do live in the default {@code minecraft:blocks} atlas. */
+    public static MutableText block(String sprite) {
+        return MutableText.of(new ObjectTextContent(new AtlasTextObjectContents(
+                Atlases.BLOCKS, Identifier.ofVanilla(sprite))));
     }
 
     /** Player heads are fixed at 8x8 in vanilla, which lines up with a text line. */
