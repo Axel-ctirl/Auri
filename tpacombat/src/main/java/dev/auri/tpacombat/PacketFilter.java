@@ -13,6 +13,10 @@ import net.minecraft.text.TranslatableTextContent;
 /**
  * Decides whether an outgoing packet should be withheld from a player based on their settings.
  * Called from the network mixin, which is why the store is handed over statically at startup.
+ *
+ * <p>This runs for every packet sent to every player, so it is written to bail out on the very
+ * first check for the overwhelming majority of traffic (movement, chunks, entity updates) without
+ * touching the profile store at all.
  */
 public final class PacketFilter {
 
@@ -26,38 +30,44 @@ public final class PacketFilter {
     }
 
     public static boolean shouldDrop(ServerPlayerEntity player, Packet<?> packet) {
-        PlayerDataStore dataStore = store;
-        if (dataStore == null) {
-            return false;
-        }
-        PlayerProfile profile = dataStore.get(player.getUuid());
-
+        // Type first: anything we never filter leaves without a map lookup.
         if (packet instanceof EntityStatusS2CPacket status) {
-            return !profile.totemParticles && status.getStatus() == EntityStatuses.USE_TOTEM_OF_UNDYING;
+            if (status.getStatus() != EntityStatuses.USE_TOTEM_OF_UNDYING) {
+                return false;
+            }
+            return !profile(player).totemParticles;
         }
         if (packet instanceof ExplosionS2CPacket explosion) {
             // Dropping a packet that carries knockback would rob the player of the physics, so
             // only the purely decorative ones are withheld.
-            return !profile.explosionParticles && explosion.playerKnockback().isEmpty();
+            if (explosion.playerKnockback().isPresent()) {
+                return false;
+            }
+            return !profile(player).explosionParticles;
         }
         if (packet instanceof ChatMessageS2CPacket) {
-            return !profile.publicChat;
+            return !profile(player).publicChat;
         }
         if (packet instanceof GameMessageS2CPacket message) {
-            return shouldDropSystemMessage(profile, message.content());
+            String key = translationKey(message.content());
+            if (key == null) {
+                return false;
+            }
+            return shouldDropSystemMessage(profile(player), key);
         }
         return false;
+    }
+
+    private static PlayerProfile profile(ServerPlayerEntity player) {
+        PlayerDataStore dataStore = store;
+        return dataStore == null ? new PlayerProfile() : dataStore.peek(player.getUuid());
     }
 
     /**
      * Vanilla system messages are translatable, and their keys are stable across versions, so the
      * key is a far more reliable classifier than trying to match rendered text.
      */
-    private static boolean shouldDropSystemMessage(PlayerProfile profile, Text content) {
-        String key = translationKey(content);
-        if (key == null) {
-            return false;
-        }
+    private static boolean shouldDropSystemMessage(PlayerProfile profile, String key) {
         if (key.startsWith("death.")) {
             return !profile.deathMessages;
         }

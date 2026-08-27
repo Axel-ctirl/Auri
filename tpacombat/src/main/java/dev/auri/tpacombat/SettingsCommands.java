@@ -13,9 +13,11 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 public final class SettingsCommands {
 
     private final PlayerDataStore store;
+    private final PlayerEffects effects;
 
-    public SettingsCommands(PlayerDataStore store) {
+    public SettingsCommands(PlayerDataStore store, PlayerEffects effects) {
         this.store = store;
+        this.effects = effects;
     }
 
     public void register(CommandDispatcher<ServerCommandSource> dispatcher) {
@@ -118,6 +120,8 @@ public final class SettingsCommands {
         PlayerProfile profile = store.get(player.getUuid());
         setting.cycle(profile);
         store.markDirty();
+        // Night vision and phantom suppression otherwise wait for the next sweep, which reads as lag.
+        effects.applyNow(player);
         // Re-open the same category so the client's waiting screen resolves into the updated menu.
         SettingsDialogs.openCategory(player, profile, setting.category());
         return 1;

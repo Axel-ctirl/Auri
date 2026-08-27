@@ -88,8 +88,20 @@ public final class PlayerDataStore {
         dirty = true;
     }
 
+    private static final PlayerProfile DEFAULTS = new PlayerProfile();
+
+    /** Creates and stores a profile. Use only when the caller is about to change something. */
     public PlayerProfile get(UUID uuid) {
         return profiles.computeIfAbsent(uuid, k -> new PlayerProfile());
+    }
+
+    /**
+     * Read-only lookup that never inserts. Hot paths use this so that merely reading a setting
+     * cannot grow the map, and so packet filtering stays a plain read.
+     */
+    public PlayerProfile peek(UUID uuid) {
+        PlayerProfile profile = profiles.get(uuid);
+        return profile == null ? DEFAULTS : profile;
     }
 
     public Map<UUID, PlayerProfile> all() {

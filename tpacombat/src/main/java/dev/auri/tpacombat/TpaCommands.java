@@ -127,7 +127,7 @@ public final class TpaCommands {
             return 0;
         }
         // The privacy setting is a broader filter that sits in front of the explicit block list.
-        Visibility visibility = store.get(target.getUuid()).tpaRequests;
+        Visibility visibility = store.peek(target.getUuid()).tpaRequests;
         if (!visibility.allows(social, target.getUuid(), sender.getUuid())) {
             Messages.actionBar(sender, Messages.tpaPrivacyBlocked(targetName, visibility));
             return 0;
@@ -141,7 +141,7 @@ public final class TpaCommands {
         int seconds = tpa.timeoutSeconds();
         String senderName = sender.getGameProfile().name();
         Messages.actionBar(sender, Messages.tpaSent(targetName, seconds));
-        if (store.get(target.getUuid()).tpaAlerts) {
+        if (store.peek(target.getUuid()).tpaAlerts) {
             Messages.chat(target, Messages.withPrefix(Messages.tpaReceived(senderName, seconds)));
             Messages.actionBar(target, Messages.tpaReceivedBar(senderName));
         }

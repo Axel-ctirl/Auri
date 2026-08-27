@@ -31,7 +31,7 @@ public final class Messages {
     public static void broadcast(MinecraftServer server, Text message) {
         Text prefixed = withPrefix(message);
         for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
-            if (store == null || store.get(player.getUuid()).serverMessages) {
+            if (store == null || store.peek(player.getUuid()).serverMessages) {
                 player.sendMessage(prefixed);
             }
         }

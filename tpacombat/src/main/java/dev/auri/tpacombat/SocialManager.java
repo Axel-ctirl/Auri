@@ -44,7 +44,7 @@ public final class SocialManager {
 
     /** True when {@code owner} follows {@code other}. */
     public boolean isFollowing(UUID owner, UUID other) {
-        return store.get(owner).following.contains(other.toString());
+        return store.peek(owner).following.contains(other.toString());
     }
 
     public boolean areFriends(UUID a, UUID b) {
@@ -53,7 +53,7 @@ public final class SocialManager {
 
     public List<UUID> following(UUID owner) {
         List<UUID> out = new ArrayList<>();
-        for (String id : store.get(owner).following) {
+        for (String id : store.peek(owner).following) {
             try {
                 out.add(UUID.fromString(id));
             } catch (IllegalArgumentException ignored) {
@@ -91,7 +91,7 @@ public final class SocialManager {
         if (online != null) {
             return online.getGameProfile().name();
         }
-        String stored = store.get(uuid).lastKnownName;
+        String stored = store.peek(uuid).lastKnownName;
         return stored.isEmpty() ? uuid.toString().substring(0, 8) : stored;
     }
 }

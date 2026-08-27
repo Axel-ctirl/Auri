@@ -93,9 +93,13 @@ This uses vanilla **dialogs**, added to Minecraft in 1.21.6 — a server-driven 
 clients render natively. It is not a chest GUI and not a Paper-only feature; Paper's Dialog API is
 just a plugin-facing wrapper over the same system.
 
+`/settings` opens a category grid; picking one shows just that category's settings, one per row,
+with a **← Back** button. Navigation and values are never mixed into the same list.
+
 The menu is built per player at the moment it opens (via `RegistryEntry.of`, not a registered
 static dialog), which is what lets each row show that player's current value. Clicking a row
-cycles it and re-opens the menu, so it reads as toggling in place.
+cycles it and re-opens the menu, so it reads as toggling in place. Toggles that change world
+state are applied the instant they are clicked rather than on the next sweep.
 
 Category buttons carry real item textures rather than unicode, using the `object` text component
 added in 1.21.9. The same mechanism draws player heads beside names in the Friends list.

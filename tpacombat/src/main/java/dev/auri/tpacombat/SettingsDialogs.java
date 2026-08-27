@@ -108,12 +108,6 @@ public final class SettingsDialogs {
                 "Follow a player by name",
                 "settings friendsearch"));
 
-        for (SettingsRegistry.Category other : SettingsRegistry.categories()) {
-            if (!other.id().equals("friends")) {
-                buttons.add(navButton(other));
-            }
-        }
-
         MutableText counts = Text.empty()
                 .append(Text.literal(social.friends(self).size() + " friends").formatted(Formatting.WHITE))
                 .append(Text.literal(" / ").formatted(Formatting.DARK_GRAY))
@@ -122,7 +116,7 @@ public final class SettingsDialogs {
         open(player, new MultiActionDialog(
                 common(title(), List.of(new PlainMessageDialogBody(counts, 260))),
                 buttons,
-                Optional.of(closeButton()),
+                Optional.of(backButton()),
                 2));
     }
 
@@ -215,6 +209,13 @@ public final class SettingsDialogs {
                 Optional.of(Text.literal(tooltip).formatted(Formatting.GRAY)), BUTTON_WIDTH);
         return new DialogActionButtonData(button,
                 Optional.of(new SimpleDialogAction(new ClickEvent.RunCommand(command))));
+    }
+
+    private static DialogActionButtonData backButton() {
+        return new DialogActionButtonData(
+                new DialogButtonData(Text.literal("\u2190 Back").formatted(Formatting.GRAY),
+                        Optional.empty(), 200),
+                Optional.of(new SimpleDialogAction(new ClickEvent.RunCommand("settings"))));
     }
 
     private static DialogActionButtonData closeButton() {

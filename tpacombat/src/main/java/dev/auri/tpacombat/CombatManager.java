@@ -27,7 +27,7 @@ public final class CombatManager {
 
     /** Combat alerts are opt-out per player; missing store means "not loaded yet", so allow. */
     private boolean wantsCombatAlerts(ServerPlayerEntity player) {
-        return store == null || store.get(player.getUuid()).combatAlerts;
+        return store == null || store.peek(player.getUuid()).combatAlerts;
     }
 
     private static long tagDurationMillis() {

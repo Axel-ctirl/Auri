@@ -26,6 +26,7 @@ public final class TpaCombat implements DedicatedServerModInitializer {
         SocialManager social = new SocialManager(store);
         socialManager = social;
         PlayerEffects effects = new PlayerEffects(store);
+
         PacketFilter.init(store);
         Messages.setStore(store);
 
@@ -33,12 +34,11 @@ public final class TpaCombat implements DedicatedServerModInitializer {
         combat.setStore(store);
         TpaManager tpa = new TpaManager(combat);
         TpaCommands commands = new TpaCommands(tpa, combat, store, social);
-        SettingsCommands settingsCommands = new SettingsCommands(store);
+        SettingsCommands settingsCommands = new SettingsCommands(store, effects);
         SocialCommands socialCommands = new SocialCommands(social, store);
         TabList tabList = new TabList();
 
         ServerLifecycleEvents.SERVER_STARTING.register(server -> {
-            Config.load();
             combat.onServerStarting();
             tabList.reset();
         });
