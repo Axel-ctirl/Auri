@@ -1,76 +1,165 @@
 {
   "type": "minecraft:multi_action",
-  "title": { "text": "Settings", "color": "red" },
-  "external_title": { "text": "Settings" },
+  "title": {
+    "text": "Settings",
+    "color": "red"
+  },
+  "external_title": {
+    "text": "Settings"
+  },
   "can_close_with_escape": true,
   "pause": false,
   "after_action": "wait_for_response",
-  "columns": 2,
+  "columns": 1,
   "body": [
     {
       "type": "minecraft:plain_message",
-      "contents": { "text": "Choose a category", "color": "gray" },
+      "contents": {
+        "text": "Choose a category",
+        "color": "gray"
+      },
       "width": 260
     }
   ],
   "actions": [
     {
       "label": [
-        { "object": "atlas", "atlas": "minecraft:items", "sprite": "minecraft:item/oak_sign" },
-        { "text": " Chat", "color": "white" }
+        {
+          "object": "atlas",
+          "atlas": "minecraft:items",
+          "sprite": "minecraft:item/oak_sign"
+        },
+        {
+          "text": " Chat",
+          "color": "white"
+        }
       ],
-      "tooltip": { "text": "Chat and message visibility", "color": "gray" },
+      "tooltip": {
+        "text": "Chat and message visibility",
+        "color": "gray"
+      },
       "width": 200,
-      "action": { "type": "run_command", "command": "settings chat" }
+      "action": {
+        "type": "run_command",
+        "command": "settings chat"
+      }
     },
     {
       "label": [
-        { "object": "atlas", "atlas": "minecraft:items", "sprite": "minecraft:item/bell" },
-        { "text": " Notifications", "color": "white" }
+        {
+          "object": "atlas",
+          "atlas": "minecraft:items",
+          "sprite": "minecraft:item/bell"
+        },
+        {
+          "text": " Notifications",
+          "color": "white"
+        }
       ],
-      "tooltip": { "text": "TPA and combat alerts", "color": "gray" },
+      "tooltip": {
+        "text": "TPA and combat alerts",
+        "color": "gray"
+      },
       "width": 200,
-      "action": { "type": "run_command", "command": "settings notifications" }
+      "action": {
+        "type": "run_command",
+        "command": "settings notifications"
+      }
     },
     {
       "label": [
-        { "object": "atlas", "atlas": "minecraft:items", "sprite": "minecraft:item/diamond_sword" },
-        { "text": " PvP", "color": "white" }
+        {
+          "object": "atlas",
+          "atlas": "minecraft:items",
+          "sprite": "minecraft:item/diamond_sword"
+        },
+        {
+          "text": " PvP",
+          "color": "white"
+        }
       ],
-      "tooltip": { "text": "Totem and explosion particles", "color": "gray" },
+      "tooltip": {
+        "text": "Totem and explosion particles",
+        "color": "gray"
+      },
       "width": 200,
-      "action": { "type": "run_command", "command": "settings pvp" }
+      "action": {
+        "type": "run_command",
+        "command": "settings pvp"
+      }
     },
     {
       "label": [
-        { "object": "atlas", "atlas": "minecraft:items", "sprite": "minecraft:item/barrier" },
-        { "text": " Privacy", "color": "white" }
+        {
+          "object": "atlas",
+          "atlas": "minecraft:items",
+          "sprite": "minecraft:item/barrier"
+        },
+        {
+          "text": " Privacy",
+          "color": "white"
+        }
       ],
-      "tooltip": { "text": "Who can send you teleport requests", "color": "gray" },
+      "tooltip": {
+        "text": "Who can send you teleport requests",
+        "color": "gray"
+      },
       "width": 200,
-      "action": { "type": "run_command", "command": "settings privacy" }
+      "action": {
+        "type": "run_command",
+        "command": "settings privacy"
+      }
     },
     {
       "label": [
-        { "object": "atlas", "atlas": "minecraft:items", "sprite": "minecraft:item/comparator" },
-        { "text": " General", "color": "white" }
+        {
+          "object": "atlas",
+          "atlas": "minecraft:items",
+          "sprite": "minecraft:item/comparator"
+        },
+        {
+          "text": " General",
+          "color": "white"
+        }
       ],
-      "tooltip": { "text": "Phantoms, ender pearls and night vision", "color": "gray" },
+      "tooltip": {
+        "text": "Phantoms, ender pearls and night vision",
+        "color": "gray"
+      },
       "width": 200,
-      "action": { "type": "run_command", "command": "settings general" }
+      "action": {
+        "type": "run_command",
+        "command": "settings general"
+      }
     },
     {
       "label": [
-        { "object": "atlas", "atlas": "minecraft:items", "sprite": "minecraft:item/name_tag" },
-        { "text": " Friends", "color": "white" }
+        {
+          "object": "atlas",
+          "atlas": "minecraft:items",
+          "sprite": "minecraft:item/name_tag"
+        },
+        {
+          "text": " Friends",
+          "color": "white"
+        }
       ],
-      "tooltip": { "text": "Followers, following and friends", "color": "gray" },
+      "tooltip": {
+        "text": "Followers, following and friends",
+        "color": "gray"
+      },
       "width": 200,
-      "action": { "type": "run_command", "command": "settings friends" }
+      "action": {
+        "type": "run_command",
+        "command": "settings friends"
+      }
     }
   ],
   "exit_action": {
-    "label": { "text": "Close", "color": "red" },
+    "label": {
+      "text": "Close",
+      "color": "red"
+    },
     "width": 200
   }
 }

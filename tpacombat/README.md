@@ -101,10 +101,16 @@ This uses vanilla **dialogs**, added to Minecraft in 1.21.6 — a server-driven 
 clients render natively. It is not a chest GUI and not a Paper-only feature; Paper's Dialog API is
 just a plugin-facing wrapper over the same system.
 
-`/settings` opens a category grid; picking one shows just that category's settings, one per row.
-Picking a setting opens **its own screen**, listing every value that setting can take with the
-active one ticked. Choosing a value applies it and returns you to the category. Every screen has a
-**← Back** button, and navigation is never mixed in with values.
+Every screen is a single vertical list, and you move one level at a time:
+
+```
+G  ->  Settings            (Chat, Notifications, PvP, Privacy, General, Friends)
+       -> Chat             (one row per setting, showing its current value)
+          -> Public Chat   (ON / OFF, the active one ticked)
+```
+
+Picking a value applies it and drops you back to the category. Every screen below the top has a
+**← Back** button; the top level has **Close**. Navigation is never mixed in with values.
 
 The menu is built per player at the moment it opens (via `RegistryEntry.of`, not a registered
 static dialog), which is what lets each row show that player's current value. Toggles that change

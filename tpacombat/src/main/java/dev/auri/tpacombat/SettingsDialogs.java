@@ -83,7 +83,7 @@ public final class SettingsDialogs {
                         Text.literal("Choose a category").formatted(Formatting.GRAY), 260))),
                 buttons,
                 Optional.of(closeButton()),
-                2));
+                1));
     }
 
     // ------------------------------------------------------------------ friends
@@ -129,7 +129,7 @@ public final class SettingsDialogs {
                 common(title(), List.of(new PlainMessageDialogBody(counts, 260))),
                 buttons,
                 Optional.of(backButton()),
-                2));
+                1));
     }
 
     /**
@@ -173,7 +173,7 @@ public final class SettingsDialogs {
                                 .formatted(Formatting.GRAY), 260))),
                 buttons,
                 Optional.of(backButton("settings privacy")),
-                2));
+                1));
     }
 
     /** Name entry used by both the friends search and the auto-accept list. */
