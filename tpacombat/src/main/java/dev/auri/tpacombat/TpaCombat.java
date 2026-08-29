@@ -28,6 +28,7 @@ public final class TpaCombat implements DedicatedServerModInitializer {
         PlayerEffects effects = new PlayerEffects(store);
 
         PacketFilter.init(store);
+        PearlSettings.init(store);
         Messages.setStore(store);
 
         CombatManager combat = new CombatManager();
@@ -69,12 +70,7 @@ public final class TpaCombat implements DedicatedServerModInitializer {
 
         ServerLivingEntityEvents.AFTER_DAMAGE.register(
                 (entity, source, baseDamage, damageTaken, blocked) -> combat.onAfterDamage(entity, source));
-        ServerLivingEntityEvents.AFTER_DEATH.register((entity, source) -> {
-            combat.onAfterDeath(entity, source);
-            if (entity instanceof net.minecraft.server.network.ServerPlayerEntity dead) {
-                effects.onDeath(dead.getEntityWorld().getServer(), dead);
-            }
-        });
+        ServerLivingEntityEvents.AFTER_DEATH.register(combat::onAfterDeath);
 
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
             tabList.sendTo(handler.getPlayer(), server);

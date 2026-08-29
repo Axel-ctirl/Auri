@@ -4,7 +4,8 @@
   "package": "dev.auri.tpacombat.mixin",
   "compatibilityLevel": "JAVA_21",
   "server": [
-    "NetworkFilterMixin"
+    "NetworkFilterMixin",
+    "EnderPearlMixin"
   ],
   "injectors": {
     "defaultRequire": 1

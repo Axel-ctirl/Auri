@@ -2,14 +2,9 @@ package dev.auri.tpacombat;
 
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
-import net.minecraft.entity.projectile.thrown.EnderPearlEntity;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
 import net.minecraft.stat.Stats;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /** Applies the General-tab settings that need per-tick or per-death enforcement. */
 public final class PlayerEffects {
@@ -86,21 +81,4 @@ public final class PlayerEffects {
         }
     }
 
-    /** Called on death: discards the player's in-flight pearls when they asked for that. */
-    public void onDeath(MinecraftServer server, ServerPlayerEntity player) {
-        if (store.peek(player.getUuid()).keepEnderPearlsOnDeath) {
-            return;
-        }
-        List<EnderPearlEntity> doomed = new ArrayList<>();
-        for (ServerWorld world : server.getWorlds()) {
-            for (var entity : world.iterateEntities()) {
-                if (entity instanceof EnderPearlEntity pearl && pearl.getOwner() == player) {
-                    doomed.add(pearl);
-                }
-            }
-        }
-        for (EnderPearlEntity pearl : doomed) {
-            pearl.discard();
-        }
-    }
 }

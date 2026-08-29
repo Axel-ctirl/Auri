@@ -143,7 +143,7 @@ no error logged anywhere — the dialog still loads fine.
 | | Explosion Particles | ON / OFF |
 | Privacy | Who Can TPA You | Everyone / Friends / Following / Nobody |
 | General | Phantom Spawning | ON / OFF |
-| | Keep Ender Pearls On Death | ON / OFF |
+| | Ender Pearls Vanish On Death | ON / OFF |
 | | Night Vision | ON / OFF |
 | Friends | follow list, filter and search | |
 
@@ -177,9 +177,11 @@ what *you* are shown.
   The phantom spawner gates on each player's own value, so this suppresses phantoms for them and
   nobody else, with no mixin involved. The trade-off is that their "time since last rest"
   statistic stays pinned at zero.
-- **Keep Ender Pearls On Death** — when off, that player's in-flight ender pearls are discarded
-  when they die. When on, vanilla behaviour is left alone. There is no vanilla gamerule for this
-  in 1.21.11, so it is enforced by the mod on the death event.
+- **Ender Pearls Vanish On Death** — vanilla already discards a player's thrown pearls when they
+  die, gated on the `ender_pearls_vanish_on_death` game rule. Rather than reimplementing that,
+  this substitutes the owner's own preference for the rule's value where vanilla reads it, so
+  vanilla still does the discarding and there is one implementation, not two. If the owner cannot
+  be resolved the rule's real value is used, so the worst case is plain vanilla behaviour.
 - **Night Vision** — an infinite, ambient, particle-free night vision effect, re-applied on a
   timer so it survives death, dimension changes and milk. Toggling it off only clears the
   infinite ambient instance, so potion- and beacon-granted night vision is left untouched.
@@ -205,6 +207,23 @@ addressed by UUID, so it works for offline players too.
 **Who Can TPA You** (Privacy) uses this: set it to `Friends` and only mutual follows can send you
 a request; `Following` allows people you follow; `Nobody` refuses everyone. It sits in front of
 `/tpablock`, which remains a hard per-player block.
+
+### Defaults are vanilla
+
+Every per-player setting starts at whatever vanilla would do, so a player who never opens the menu
+gets an unmodified game. Each default was checked against the matching game rule rather than
+assumed:
+
+| Setting | Default | Matches |
+| --- | --- | --- |
+| Death Messages | ON | `show_death_messages` (true) |
+| Advancement Messages | ON | `show_advancement_messages` (true) |
+| Phantom Spawning | ON | `spawn_phantoms` (true) |
+| Ender Pearls Vanish On Death | ON | `ender_pearls_vanish_on_death` (true) |
+| Night Vision | OFF | no effect by default |
+| Public / Server / Join-Leave Messages | ON | vanilla shows them |
+| Totem and Explosion Particles | ON | vanilla renders them |
+| Private Messages, Who Can TPA You | Everyone | no vanilla restriction |
 
 ## Config
 

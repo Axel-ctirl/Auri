@@ -28,8 +28,11 @@ public final class PlayerProfile {
     // General
     /** When false, phantoms stop spawning around this player. */
     public boolean phantomSpawning = true;
-    /** When false, this player's in-flight ender pearls are discarded when they die. */
-    public boolean keepEnderPearlsOnDeath = true;
+    /**
+     * Mirrors the vanilla {@code ender_pearls_vanish_on_death} game rule, which defaults to true,
+     * but decided per player. Vanilla does the discarding; this only overrides its answer.
+     */
+    public boolean enderPearlsVanishOnDeath = true;
     public boolean nightVision = false;
 
     // Social — UUID strings so GSON round-trips them without a custom adapter.

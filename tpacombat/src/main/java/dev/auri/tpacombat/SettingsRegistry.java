@@ -64,9 +64,9 @@ public final class SettingsRegistry {
             new SettingDef.Toggle("general.phantoms", "general", "Phantom Spawning",
                     "Allow phantoms to spawn around you when you have not slept.",
                     p -> p.phantomSpawning, (p, v) -> p.phantomSpawning = v),
-            new SettingDef.Toggle("general.pearls", "general", "Keep Ender Pearls On Death",
-                    "Keep your thrown ender pearls in flight when you die.",
-                    p -> p.keepEnderPearlsOnDeath, (p, v) -> p.keepEnderPearlsOnDeath = v),
+            new SettingDef.Toggle("general.pearls", "general", "Ender Pearls Vanish On Death",
+                    "Destroy your thrown ender pearls when you die. This is vanilla behaviour.",
+                    p -> p.enderPearlsVanishOnDeath, (p, v) -> p.enderPearlsVanishOnDeath = v),
             new SettingDef.Toggle("general.nightvision", "general", "Night Vision",
                     "Permanent night vision, with no particles or effect icon.",
                     p -> p.nightVision, (p, v) -> p.nightVision = v));
