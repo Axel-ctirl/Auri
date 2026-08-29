@@ -174,9 +174,19 @@ what *you* are shown.
 ### General
 
 - **Phantom Spawning** — turning this off holds that player's `timeSinceRest` statistic at zero.
-  The phantom spawner gates on each player's own value, so this suppresses phantoms for them and
-  nobody else, with no mixin involved. The trade-off is that their "time since last rest"
-  statistic stays pinned at zero.
+  The phantom spawner gates on each player's own value, so no phantoms spawn *because of* them.
+  The trade-off is that their "time since last rest" statistic stays pinned at zero.
+
+  On its own that is not the whole story, because a phantom spawned for someone else nearby is an
+  ordinary mob: vanilla's `FindTargetGoal` collects every player in a 16x64x16 box and picks the
+  **highest** one, with no memory of who it spawned for. A player who opted out could therefore be
+  attacked first simply by standing on a block. So the targeting order is reordered to put players
+  who left phantom spawning **on** ahead of those who turned it off, keeping vanilla's ordering as
+  the tie-break within each group.
+
+  Nobody is removed from the candidate list, only reordered — a player who opted out is still
+  targeted when no opted-in player is in range. Turning the setting off gets you deprioritised,
+  never invulnerable, so it cannot be used to stand next to a friend and be untouchable.
 - **Ender Pearls Vanish On Death** — vanilla already discards a player's thrown pearls when they
   die, gated on the `ender_pearls_vanish_on_death` game rule. Rather than reimplementing that,
   this substitutes the owner's own preference for the rule's value where vanilla reads it, so

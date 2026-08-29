@@ -62,7 +62,7 @@ public final class SettingsRegistry {
                     p -> p.tpaRequests, (p, v) -> p.tpaRequests = v),
 
             new SettingDef.Toggle("general.phantoms", "general", "Phantom Spawning",
-                    "Allow phantoms to spawn around you when you have not slept.",
+                    "Let phantoms spawn for you. Off also sends them after other players first.",
                     p -> p.phantomSpawning, (p, v) -> p.phantomSpawning = v),
             new SettingDef.Toggle("general.pearls", "general", "Ender Pearls Vanish On Death",
                     "Destroy your thrown ender pearls when you die. This is vanilla behaviour.",

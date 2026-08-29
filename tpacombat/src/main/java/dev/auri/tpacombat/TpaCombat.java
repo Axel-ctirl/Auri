@@ -29,6 +29,7 @@ public final class TpaCombat implements DedicatedServerModInitializer {
 
         PacketFilter.init(store);
         PearlSettings.init(store);
+        PhantomTargeting.init(store);
         Messages.setStore(store);
 
         CombatManager combat = new CombatManager();
