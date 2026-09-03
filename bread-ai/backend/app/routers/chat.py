@@ -144,11 +144,14 @@ def chat_stream(
         except BreadError as exc:
             failure = exc.message
             yield _sse("error", {"code": exc.code, "message": exc.message, "hint": exc.hint})
-        except Exception as exc:  # noqa: BLE001 - the client deserves the reason
+        except Exception as exc:
             failure = str(exc)
             yield _sse(
                 "error",
-                {"code": "generation_failed", "message": f"{type(exc).__name__}: {exc}"},
+                {
+                    "code": "generation_failed",
+                    "message": f"{type(exc).__name__}: {exc}",
+                },
             )
         finally:
             registry.release_stream(stream_id)
@@ -188,9 +191,7 @@ def chat_stream(
             },
         )
 
-    return StreamingResponse(
-        event_source(), media_type="text/event-stream", headers=SSE_HEADERS
-    )
+    return StreamingResponse(event_source(), media_type="text/event-stream", headers=SSE_HEADERS)
 
 
 @router.post("/chat/stop", response_model=ChatStopResponse, summary="Cancel generation")

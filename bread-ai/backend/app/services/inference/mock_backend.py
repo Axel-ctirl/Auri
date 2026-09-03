@@ -10,9 +10,15 @@ from __future__ import annotations
 import re
 import time
 from collections.abc import Iterator
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
-from .base import BackendStatus, ChatTurn, GenerationParams, InferenceBackend, StopSignal
+from .base import (
+    BackendStatus,
+    ChatTurn,
+    GenerationParams,
+    InferenceBackend,
+    StopSignal,
+)
 
 LANGUAGE_HINTS = {
     "python": "python",
@@ -45,24 +51,24 @@ LANGUAGE_HINTS = {
 }
 
 SNIPPETS = {
-    "python": 'def summarize_lines(path: str) -> dict[str, int]:\n'
+    "python": "def summarize_lines(path: str) -> dict[str, int]:\n"
     '    """Count lines, words and characters in a text file."""\n'
-    "    counts = {\"lines\": 0, \"words\": 0, \"characters\": 0}\n"
-    "    with open(path, \"r\", encoding=\"utf-8\") as handle:\n"
+    '    counts = {"lines": 0, "words": 0, "characters": 0}\n'
+    '    with open(path, "r", encoding="utf-8") as handle:\n'
     "        for line in handle:\n"
-    "            counts[\"lines\"] += 1\n"
-    "            counts[\"words\"] += len(line.split())\n"
-    "            counts[\"characters\"] += len(line)\n"
+    '            counts["lines"] += 1\n'
+    '            counts["words"] += len(line.split())\n'
+    '            counts["characters"] += len(line)\n'
     "    return counts\n",
     "java": "public final class GreetCommand implements CommandExecutor {\n"
     "    @Override\n"
     "    public boolean onCommand(CommandSender sender, Command command,\n"
     "                             String label, String[] args) {\n"
     "        if (!(sender instanceof Player player)) {\n"
-    "            sender.sendMessage(\"Only players can run this command.\");\n"
+    '            sender.sendMessage("Only players can run this command.");\n'
     "            return true;\n"
     "        }\n"
-    "        player.sendMessage(Component.text(\"Hello from Bread.\"));\n"
+    '        player.sendMessage(Component.text("Hello from Bread."));\n'
     "        return true;\n"
     "    }\n"
     "}\n",
@@ -112,7 +118,7 @@ class MockBackend(InferenceBackend):
 
     def load(self) -> None:
         self._loaded = True
-        self.loaded_at = datetime.now(timezone.utc)
+        self.loaded_at = datetime.now(UTC)
         self.load_seconds = 0.0
 
     def unload(self) -> None:
@@ -151,9 +157,7 @@ class MockBackend(InferenceBackend):
                 time.sleep(self.delay_seconds)
 
     def _compose(self, turns: list[ChatTurn]) -> str:
-        last_user = next(
-            (turn.content for turn in reversed(turns) if turn.role == "user"), ""
-        )
+        last_user = next((turn.content for turn in reversed(turns) if turn.role == "user"), "")
         language = _guess_language(last_user)
         snippet = SNIPPETS.get(language, DEFAULT_SNIPPET)
         topic = _first_sentence(last_user) or "your request"

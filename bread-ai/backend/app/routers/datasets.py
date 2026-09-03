@@ -24,7 +24,9 @@ router = APIRouter(prefix="/datasets", tags=["datasets"])
 
 @router.get("", response_model=list[DatasetRunOut], summary="List dataset runs")
 def list_dataset_runs(session: Session = Depends(get_session)) -> list[DatasetRunOut]:
-    return [DatasetRunOut(**run.model_dump()) for run in datasets_service.list_runs(session)]
+    return [
+        DatasetRunOut(**run.model_dump()) for run in datasets_service.list_runs(session)
+    ]
 
 
 @router.get("/sources", summary="Which sources exist and what they require")
@@ -87,7 +89,9 @@ def collect_dataset(
 
 
 @router.post(
-    "/validate", response_model=DatasetValidateResponse, summary="Validate a JSONL dataset"
+    "/validate",
+    response_model=DatasetValidateResponse,
+    summary="Validate a JSONL dataset",
 )
 def validate_dataset(
     payload: DatasetValidateRequest, settings: Settings = Depends(get_settings)
@@ -107,9 +111,13 @@ def validate_dataset(
     )
 
 
-@router.get("/report", response_model=DatasetReportResponse, summary="Summarise a dataset")
+@router.get(
+    "/report", response_model=DatasetReportResponse, summary="Summarise a dataset"
+)
 def dataset_report(
-    path: str = Query(..., description="Path to a .jsonl file under the data directory"),
+    path: str = Query(
+        ..., description="Path to a .jsonl file under the data directory"
+    ),
     settings: Settings = Depends(get_settings),
 ) -> DatasetReportResponse:
     return DatasetReportResponse(**datasets_service.dataset_report(settings, path))

@@ -22,16 +22,17 @@ def test_chat_continues_an_existing_conversation(client):
     first = client.post("/api/chat", json={"message": "First question about Rust."}).json()
     client.post(
         "/api/chat",
-        json={"conversation_id": first["conversation_id"], "message": "And a follow-up."},
+        json={
+            "conversation_id": first["conversation_id"],
+            "message": "And a follow-up.",
+        },
     )
     detail = client.get(f"/api/conversations/{first['conversation_id']}").json()
     assert len(detail["messages"]) == 4
 
 
 def test_chat_respects_persist_false(client):
-    body = client.post(
-        "/api/chat", json={"message": "Do not store this.", "persist": False}
-    ).json()
+    body = client.post("/api/chat", json={"message": "Do not store this.", "persist": False}).json()
     detail = client.get(f"/api/conversations/{body['conversation_id']}").json()
     assert detail["messages"] == []
 

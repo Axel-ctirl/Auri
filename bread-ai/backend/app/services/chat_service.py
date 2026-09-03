@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from sqlmodel import Session, select
+from sqlmodel import Session, col, select
 
 from ..config import Settings
 from ..errors import NotFoundError
@@ -56,7 +56,7 @@ def stored_history(session: Session, conversation_id: str) -> list[Message]:
     statement = (
         select(Message)
         .where(Message.conversation_id == conversation_id)
-        .order_by(Message.created_at, Message.id)
+        .order_by(col(Message.created_at), col(Message.id))
     )
     return list(session.exec(statement).all())
 
@@ -73,17 +73,26 @@ def resolve_generation_params(
         return default
 
     return GenerationParams(
-        temperature=float(pick(request.temperature, conversation.temperature, settings.temperature)),
+        temperature=float(
+            pick(request.temperature, conversation.temperature, settings.temperature)
+        ),
         top_p=float(pick(request.top_p, conversation.top_p, settings.top_p)),
         max_new_tokens=int(
-            pick(request.max_new_tokens, conversation.max_new_tokens, settings.max_new_tokens)
+            pick(
+                request.max_new_tokens,
+                conversation.max_new_tokens,
+                settings.max_new_tokens,
+            )
         ),
         repetition_penalty=float(request.repetition_penalty or settings.repetition_penalty),
     )
 
 
 def retrieve_context(
-    session: Session, settings: Settings, conversation: Conversation, request: ChatRequest
+    session: Session,
+    settings: Settings,
+    conversation: Conversation,
+    request: ChatRequest,
 ) -> list[dict[str, Any]]:
     """Run retrieval when RAG is on for this request or this conversation."""
 
@@ -94,7 +103,7 @@ def retrieve_context(
     space_id = request.knowledge_space_id or conversation.knowledge_space_id
     if not space_id:
         first_space = session.exec(
-            select(KnowledgeSpace).order_by(KnowledgeSpace.created_at)
+            select(KnowledgeSpace).order_by(col(KnowledgeSpace.created_at))
         ).first()
         if first_space is None:
             return []

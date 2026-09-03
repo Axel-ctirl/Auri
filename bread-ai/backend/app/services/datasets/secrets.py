@@ -14,7 +14,12 @@ from dataclasses import dataclass
 
 PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("aws_access_key_id", re.compile(r"\b(?:AKIA|ASIA)[0-9A-Z]{16}\b")),
-    ("aws_secret_access_key", re.compile(r"(?i)aws.{0,20}?(?:secret|private).{0,20}?['\"][0-9a-zA-Z/+]{40}['\"]")),
+    (
+        "aws_secret_access_key",
+        re.compile(
+            r"(?i)aws.{0,20}?(?:secret|private).{0,20}?['\"][0-9a-zA-Z/+]{40}['\"]"
+        ),
+    ),
     ("github_token", re.compile(r"\bgh[pousr]_[A-Za-z0-9]{36,}\b")),
     ("gitlab_token", re.compile(r"\bglpat-[A-Za-z0-9_\-]{20,}\b")),
     ("slack_token", re.compile(r"\bxox[abposr]-[A-Za-z0-9-]{10,}\b")),
@@ -22,21 +27,55 @@ PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("openai_key", re.compile(r"\bsk-[A-Za-z0-9]{20,}\b")),
     ("anthropic_key", re.compile(r"\bsk-ant-[A-Za-z0-9\-_]{20,}\b")),
     ("hugging_face_token", re.compile(r"\bhf_[A-Za-z0-9]{30,}\b")),
-    ("discord_bot_token", re.compile(r"\b[MNO][A-Za-z0-9_\-]{23,26}\.[A-Za-z0-9_\-]{6}\.[A-Za-z0-9_\-]{27,}\b")),
+    (
+        "discord_bot_token",
+        re.compile(
+            r"\b[MNO][A-Za-z0-9_\-]{23,26}\.[A-Za-z0-9_\-]{6}\.[A-Za-z0-9_\-]{27,}\b"
+        ),
+    ),
     ("stripe_key", re.compile(r"\b(?:sk|rk)_(?:live|test)_[A-Za-z0-9]{20,}\b")),
-    ("private_key_block", re.compile(r"-----BEGIN (?:RSA |EC |DSA |OPENSSH |PGP )?PRIVATE KEY-----")),
-    ("jwt", re.compile(r"\beyJ[A-Za-z0-9_\-]{10,}\.[A-Za-z0-9_\-]{10,}\.[A-Za-z0-9_\-]{10,}\b")),
-    ("connection_string", re.compile(r"(?i)\b(?:postgres|postgresql|mysql|mongodb(?:\+srv)?|redis|amqp)://[^\s:@/]+:[^\s:@/]+@")),
-    ("generic_assigned_secret", re.compile(
-        r"(?i)\b(?:api[_-]?key|secret[_-]?key|access[_-]?token|auth[_-]?token|password|passwd)\b"
-        r"\s*[:=]\s*['\"][^'\"\s]{12,}['\"]"
-    )),
+    (
+        "private_key_block",
+        re.compile(r"-----BEGIN (?:RSA |EC |DSA |OPENSSH |PGP )?PRIVATE KEY-----"),
+    ),
+    (
+        "jwt",
+        re.compile(
+            r"\beyJ[A-Za-z0-9_\-]{10,}\.[A-Za-z0-9_\-]{10,}\.[A-Za-z0-9_\-]{10,}\b"
+        ),
+    ),
+    (
+        "connection_string",
+        re.compile(
+            r"(?i)\b(?:postgres|postgresql|mysql|mongodb(?:\+srv)?|redis|amqp)://[^\s:@/]+:[^\s:@/]+@"
+        ),
+    ),
+    (
+        "generic_assigned_secret",
+        re.compile(
+            r"(?i)\b(?:api[_-]?key|secret[_-]?key|access[_-]?token|auth[_-]?token|password|passwd)\b"
+            r"\s*[:=]\s*['\"][^'\"\s]{12,}['\"]"
+        ),
+    ),
 )
 
 # Values that look like credentials but are obviously placeholders.
 _PLACEHOLDER_HINTS = (
-    "example", "placeholder", "changeme", "your_", "yourkey", "xxxx", "dummy",
-    "sample", "redacted", "fake", "<", "${", "{{", "test_token", "notreal",
+    "example",
+    "placeholder",
+    "changeme",
+    "your_",
+    "yourkey",
+    "xxxx",
+    "dummy",
+    "sample",
+    "redacted",
+    "fake",
+    "<",
+    "${",
+    "{{",
+    "test_token",
+    "notreal",
 )
 
 ENTROPY_MIN_LENGTH = 32
@@ -55,7 +94,9 @@ def shannon_entropy(value: str) -> float:
         return 0.0
     counts = Counter(value)
     length = len(value)
-    return -sum((count / length) * math.log2(count / length) for count in counts.values())
+    return -sum(
+        (count / length) * math.log2(count / length) for count in counts.values()
+    )
 
 
 def _looks_like_placeholder(line: str) -> bool:
@@ -86,8 +127,13 @@ def scan_text(text: str, *, check_entropy: bool = True) -> list[SecretFinding]:
 
         if check_entropy and not _looks_like_placeholder(line):
             for token in re.findall(r"['\"]([A-Za-z0-9+/=_\-]{32,})['\"]", line):
-                if len(token) >= ENTROPY_MIN_LENGTH and shannon_entropy(token) >= ENTROPY_THRESHOLD:
-                    findings.append(SecretFinding("high_entropy_string", line_number, _mask(token)))
+                if (
+                    len(token) >= ENTROPY_MIN_LENGTH
+                    and shannon_entropy(token) >= ENTROPY_THRESHOLD
+                ):
+                    findings.append(
+                        SecretFinding("high_entropy_string", line_number, _mask(token))
+                    )
                     break
 
     return findings

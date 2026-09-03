@@ -61,7 +61,9 @@ def main(argv: list[str] | None = None) -> int:
         print_table(report["source_counts"])
     if report["length_percentiles"]:
         print_header("Record length in characters")
-        print_table({key: int(value) for key, value in report["length_percentiles"].items()})
+        print_table(
+            {key: int(value) for key, value in report["length_percentiles"].items()}
+        )
 
     if report["warnings"]:
         print_header("Warnings")

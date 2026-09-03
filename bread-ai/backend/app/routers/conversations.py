@@ -10,6 +10,7 @@ from ..db import get_session
 from ..errors import NotFoundError
 from ..models import Conversation, Message, utcnow
 from ..schemas import (
+    Citation,
     ConversationCreate,
     ConversationDetail,
     ConversationOut,
@@ -24,9 +25,7 @@ router = APIRouter(prefix="/conversations", tags=["conversations"])
 
 def _summary(session: Session, conversation: Conversation) -> ConversationOut:
     count = session.exec(
-        select(func.count())
-        .select_from(Message)
-        .where(Message.conversation_id == conversation.id)
+        select(func.count()).select_from(Message).where(Message.conversation_id == conversation.id)
     ).one()
     last = session.exec(
         select(Message)
@@ -53,7 +52,7 @@ def list_conversations(
 ) -> list[ConversationOut]:
     statement = select(Conversation)
     if not include_archived:
-        statement = statement.where(Conversation.archived == False)  # noqa: E712
+        statement = statement.where(col(Conversation.archived).is_(False))
     if search:
         statement = statement.where(col(Conversation.title).ilike(f"%{search}%"))
     statement = statement.order_by(
@@ -94,21 +93,26 @@ def get_conversation(
     messages = session.exec(
         select(Message)
         .where(Message.conversation_id == conversation_id)
-        .order_by(Message.created_at, Message.id)
+        .order_by(col(Message.created_at), col(Message.id))
     ).all()
 
     summary = _summary(session, conversation)
     return ConversationDetail(
         **summary.model_dump(),
         messages=[
-            MessageOut(**message.model_dump(), sources=message_sources(message))
+            MessageOut(
+                **message.model_dump(),
+                sources=[Citation(**source) for source in message_sources(message)],
+            )
             for message in messages
         ],
     )
 
 
 @router.patch(
-    "/{conversation_id}", response_model=ConversationOut, summary="Rename or reconfigure"
+    "/{conversation_id}",
+    response_model=ConversationOut,
+    summary="Rename or reconfigure",
 )
 def update_conversation(
     conversation_id: str,
@@ -128,9 +132,7 @@ def update_conversation(
     return _summary(session, conversation)
 
 
-@router.delete(
-    "/{conversation_id}", response_model=DeleteResponse, summary="Delete a conversation"
-)
+@router.delete("/{conversation_id}", response_model=DeleteResponse, summary="Delete a conversation")
 def delete_conversation(
     conversation_id: str, session: Session = Depends(get_session)
 ) -> DeleteResponse:
@@ -138,11 +140,14 @@ def delete_conversation(
     if conversation is None:
         raise NotFoundError(f"Conversation {conversation_id} does not exist.")
 
-    session.exec(delete(Message).where(Message.conversation_id == conversation_id))
+    session.exec(delete(Message).where(col(Message.conversation_id) == conversation_id))
     session.delete(conversation)
     session.commit()
     record_action(
-        session, "conversation.delete", target_type="conversation", target_id=conversation_id
+        session,
+        "conversation.delete",
+        target_type="conversation",
+        target_id=conversation_id,
     )
     return DeleteResponse(deleted=True, id=conversation_id)
 

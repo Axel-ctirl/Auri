@@ -52,7 +52,8 @@ def test_upload_and_index_then_search_finds_the_right_document(client):
     assert all(document["chunk_count"] > 0 for document in documents)
 
     results = client.post(
-        "/api/rag/search", json={"query": "AssemblyLinearVelocity anti speed check", "top_k": 2}
+        "/api/rag/search",
+        json={"query": "AssemblyLinearVelocity anti speed check", "top_k": 2},
     ).json()
     assert results["results"]
     assert results["results"][0]["document_name"] == "AntiSpeed.luau"
@@ -94,7 +95,9 @@ def test_oversized_upload_is_refused(client, bread_env, monkeypatch):
 
 
 def test_deleting_a_document_removes_its_chunks_and_vectors(client):
-    uploaded = _upload(client, "todelete.py", "def compute_total(rows):\n    return sum(rows)\n" * 6)
+    uploaded = _upload(
+        client, "todelete.py", "def compute_total(rows):\n    return sum(rows)\n" * 6
+    )
     document_id = uploaded.json()["documents"][0]["id"]
 
     assert client.delete(f"/api/documents/{document_id}").json()["deleted"] is True
@@ -117,7 +120,10 @@ def test_knowledge_spaces_isolate_their_documents(client):
     default_space = client.get("/api/knowledge-spaces").json()[0]
     hits = client.post(
         "/api/rag/search",
-        json={"query": "AssemblyLinearVelocity", "knowledge_space_id": default_space["id"]},
+        json={
+            "query": "AssemblyLinearVelocity",
+            "knowledge_space_id": default_space["id"],
+        },
     ).json()
     assert hits["results"] == []
 

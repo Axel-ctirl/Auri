@@ -15,7 +15,7 @@ from typing import Any
 from sqlmodel import Session, select
 
 from ..config import REPO_ROOT, Settings
-from ..errors import NotFoundError, ValidationFailure
+from ..errors import NotFoundError, ValidationFailedError
 from ..models import DatasetRun, utcnow
 from .datasets import (
     DEFAULT_ALLOWED_LICENSES,
@@ -47,8 +47,10 @@ def resolve_dataset_path(settings: Settings, raw_path: str) -> Path:
         candidate = candidate.resolve()
 
     allowed_roots = [settings.datasets_path.resolve(), settings.data_dir.resolve()]
-    if not any(root == candidate or root in candidate.parents for root in allowed_roots):
-        raise ValidationFailure(
+    if not any(
+        root == candidate or root in candidate.parents for root in allowed_roots
+    ):
+        raise ValidationFailedError(
             "Dataset paths must live under the Bread data directory.",
             code="path_outside_data_dir",
             hint=f"Move the file under {settings.datasets_path} and try again.",
@@ -69,18 +71,22 @@ def start_collection(
     """Validate the request, create the run row and kick off the worker thread."""
 
     source = request.source
-    if source not in LOCAL_SOURCES and source not in EXTERNAL_SOURCES and source != "huggingface":
-        raise ValidationFailure(f"Unknown dataset source '{source}'.")
+    if (
+        source not in LOCAL_SOURCES
+        and source not in EXTERNAL_SOURCES
+        and source != "huggingface"
+    ):
+        raise ValidationFailedError(f"Unknown dataset source '{source}'.")
 
     if source in LOCAL_SOURCES and not request.input_paths:
-        raise ValidationFailure(
+        raise ValidationFailedError(
             "Local collection needs at least one folder to read.",
             hint="Pass input_paths, for example ['C:/projects/my-plugin'].",
         )
 
     if source not in LOCAL_SOURCES and not request.accept_terms:
         descriptor = EXTERNAL_SOURCES.get(source, {})
-        raise ValidationFailure(
+        raise ValidationFailedError(
             f"'{source}' downloads data from an external host, so it needs an "
             "explicit terms acceptance.",
             code="terms_not_accepted",
@@ -91,7 +97,7 @@ def start_collection(
     languages = tuple(request.languages) if request.languages else SUPPORTED_LANGUAGES
     unknown = [name for name in languages if name not in SUPPORTED_LANGUAGES]
     if unknown:
-        raise ValidationFailure(
+        raise ValidationFailedError(
             f"Unsupported languages: {', '.join(unknown)}.",
             hint=f"Supported: {', '.join(SUPPORTED_LANGUAGES)}.",
         )
@@ -145,7 +151,9 @@ def _resolve_input_path(raw: str) -> Path:
 
 
 def _slug(name: str) -> str:
-    cleaned = "".join(character if character.isalnum() else "_" for character in name.lower())
+    cleaned = "".join(
+        character if character.isalnum() else "_" for character in name.lower()
+    )
     return cleaned.strip("_") or "dataset"
 
 
@@ -176,7 +184,7 @@ def _run_collection(
         except TermsNotAcceptedError as exc:
             run.status = "failed"
             run.error = str(exc)
-        except Exception as exc:  # noqa: BLE001 - the failure belongs in the run row
+        except Exception as exc:
             run.status = "failed"
             run.error = f"{type(exc).__name__}: {exc}"
         finally:
@@ -185,7 +193,9 @@ def _run_collection(
             session.commit()
 
 
-def validate_dataset(settings: Settings, path: str, schema_name: str, max_records: int | None):
+def validate_dataset(
+    settings: Settings, path: str, schema_name: str, max_records: int | None
+):
     resolved = resolve_dataset_path(settings, path)
     if not resolved.exists():
         raise NotFoundError(f"No dataset file at {resolved}.")

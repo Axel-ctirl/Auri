@@ -92,7 +92,10 @@ def register_model(
     session.commit()
     session.refresh(record)
     record_action(
-        session, "model.register", target_type="model", target_id=record.id,
+        session,
+        "model.register",
+        target_type="model",
+        target_id=record.id,
         detail={"model_id": record.model_id, "backend": record.backend},
     )
     return ModelSummary(**record.model_dump())

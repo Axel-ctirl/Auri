@@ -16,6 +16,7 @@ Two implementations ship with Bread:
 from __future__ import annotations
 
 import hashlib
+import itertools
 import re
 import threading
 from typing import Protocol
@@ -23,7 +24,7 @@ from typing import Protocol
 import numpy as np
 
 _lock = threading.Lock()
-_cache: dict[str, "Embedder"] = {}
+_cache: dict[str, Embedder] = {}
 
 HASHING_MODEL_ID = "bread/hashing-fallback"
 _TOKEN_RE = re.compile(r"[A-Za-z0-9_]+")
@@ -33,8 +34,7 @@ class Embedder(Protocol):
     model_id: str
     dimension: int
 
-    def embed(self, texts: list[str]) -> np.ndarray:
-        ...
+    def embed(self, texts: list[str]) -> np.ndarray: ...
 
 
 def _normalize(matrix: np.ndarray) -> np.ndarray:
@@ -69,7 +69,7 @@ def _features(text: str) -> list[tuple[str, float]]:
     lowered = text.lower()
     tokens = _TOKEN_RE.findall(lowered)
     features: list[tuple[str, float]] = [(token, 1.0) for token in tokens]
-    features.extend((f"{a}_{b}", 0.6) for a, b in zip(tokens, tokens[1:]))
+    features.extend((f"{a}_{b}", 0.6) for a, b in itertools.pairwise(tokens))
     # Character 4-grams give the fallback a little robustness to typos and to
     # identifiers that differ only by a suffix.
     compact = re.sub(r"\s+", " ", lowered)

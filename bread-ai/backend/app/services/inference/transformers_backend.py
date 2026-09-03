@@ -9,12 +9,18 @@ from __future__ import annotations
 import threading
 import time
 from collections.abc import Iterator
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 from ...errors import BackendUnavailableError, BreadError
-from .base import BackendStatus, ChatTurn, GenerationParams, InferenceBackend, StopSignal
+from .base import (
+    BackendStatus,
+    ChatTurn,
+    GenerationParams,
+    InferenceBackend,
+    StopSignal,
+)
 
 DTYPE_ALIASES = {
     "bfloat16": "bfloat16",
@@ -104,7 +110,7 @@ class TransformersBackend(InferenceBackend):
                 self._tokenizer.pad_token = self._tokenizer.eos_token
 
             self._model.eval()
-            self.loaded_at = datetime.now(timezone.utc)
+            self.loaded_at = datetime.now(UTC)
             self.load_seconds = round(time.perf_counter() - started, 2)
 
     def _attach_adapter(self) -> None:
@@ -178,7 +184,11 @@ class TransformersBackend(InferenceBackend):
         if self._model is None:
             self.load()
         import torch
-        from transformers import StoppingCriteria, StoppingCriteriaList, TextIteratorStreamer
+        from transformers import (
+            StoppingCriteria,
+            StoppingCriteriaList,
+            TextIteratorStreamer,
+        )
 
         prompt = self._render_prompt(turns)
         inputs = self._tokenizer(
@@ -189,9 +199,7 @@ class TransformersBackend(InferenceBackend):
         )
         inputs = {key: value.to(self._model.device) for key, value in inputs.items()}
 
-        streamer = TextIteratorStreamer(
-            self._tokenizer, skip_prompt=True, skip_special_tokens=True
-        )
+        streamer = TextIteratorStreamer(self._tokenizer, skip_prompt=True, skip_special_tokens=True)
 
         class _Cancelled(StoppingCriteria):
             def __call__(self, *_: Any, **__: Any) -> bool:
@@ -215,7 +223,7 @@ class TransformersBackend(InferenceBackend):
             try:
                 with torch.inference_mode():
                     self._model.generate(**generate_kwargs)
-            except BaseException as exc:  # noqa: BLE001 - surfaced to the caller below
+            except BaseException as exc:
                 errors.append(exc)
             finally:
                 streamer.end()

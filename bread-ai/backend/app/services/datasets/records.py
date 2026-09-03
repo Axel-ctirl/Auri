@@ -19,7 +19,7 @@ import hashlib
 import json
 from collections.abc import Iterable, Iterator
 from dataclasses import asdict, dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -36,7 +36,7 @@ class RecordMeta:
     path: str | None = None
     repo: str | None = None
     collected_at: str = field(
-        default_factory=lambda: datetime.now(timezone.utc).isoformat(timespec="seconds")
+        default_factory=lambda: datetime.now(UTC).isoformat(timespec="seconds")
     )
     content_sha256: str | None = None
     notes: str | None = None
@@ -111,7 +111,9 @@ def validate_record(record: dict[str, Any], schema_name: str) -> list[str]:
             role = message.get("role")
             content = message.get("content")
             if role not in VALID_ROLES:
-                problems.append(f"messages[{position}].role '{role}' is not a valid role")
+                problems.append(
+                    f"messages[{position}].role '{role}' is not a valid role"
+                )
             if not isinstance(content, str) or not content.strip():
                 problems.append(f"messages[{position}].content is empty")
             roles.append(role)
@@ -141,7 +143,9 @@ def validate_record(record: dict[str, Any], schema_name: str) -> list[str]:
     return problems
 
 
-def read_jsonl(path: Path, limit: int | None = None) -> Iterator[tuple[int, dict[str, Any] | None, str | None]]:
+def read_jsonl(
+    path: Path, limit: int | None = None
+) -> Iterator[tuple[int, dict[str, Any] | None, str | None]]:
     """Yield ``(line_number, record, error)`` for each line."""
 
     with Path(path).open("r", encoding="utf-8") as handle:

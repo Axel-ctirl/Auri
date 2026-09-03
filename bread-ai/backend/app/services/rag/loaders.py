@@ -16,23 +16,68 @@ import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
 
-from ...errors import BreadError, ValidationFailure
+from ...errors import BreadError, ValidationFailedError
 
 TEXT_EXTENSIONS = {
-    ".txt", ".md", ".json", ".csv", ".py", ".java", ".js", ".jsx", ".ts", ".tsx",
-    ".lua", ".luau", ".go", ".rs", ".c", ".h", ".cpp", ".hpp", ".cs", ".php",
-    ".rb", ".sql", ".sh", ".html", ".css", ".yaml", ".yml",
+    ".txt",
+    ".md",
+    ".json",
+    ".csv",
+    ".py",
+    ".java",
+    ".js",
+    ".jsx",
+    ".ts",
+    ".tsx",
+    ".lua",
+    ".luau",
+    ".go",
+    ".rs",
+    ".c",
+    ".h",
+    ".cpp",
+    ".hpp",
+    ".cs",
+    ".php",
+    ".rb",
+    ".sql",
+    ".sh",
+    ".html",
+    ".css",
+    ".yaml",
+    ".yml",
 }
 BINARY_EXTENSIONS = {".pdf"}
 SUPPORTED_EXTENSIONS = TEXT_EXTENSIONS | BINARY_EXTENSIONS
 
 LANGUAGE_BY_EXTENSION = {
-    ".py": "python", ".java": "java", ".js": "javascript", ".jsx": "javascript",
-    ".ts": "typescript", ".tsx": "typescript", ".lua": "lua", ".luau": "luau",
-    ".go": "go", ".rs": "rust", ".c": "c", ".h": "c", ".cpp": "cpp", ".hpp": "cpp",
-    ".cs": "csharp", ".php": "php", ".rb": "ruby", ".sql": "sql", ".sh": "bash",
-    ".html": "html", ".css": "css", ".yaml": "yaml", ".yml": "yaml",
-    ".json": "json", ".md": "markdown", ".csv": "csv", ".txt": "text",
+    ".py": "python",
+    ".java": "java",
+    ".js": "javascript",
+    ".jsx": "javascript",
+    ".ts": "typescript",
+    ".tsx": "typescript",
+    ".lua": "lua",
+    ".luau": "luau",
+    ".go": "go",
+    ".rs": "rust",
+    ".c": "c",
+    ".h": "c",
+    ".cpp": "cpp",
+    ".hpp": "cpp",
+    ".cs": "csharp",
+    ".php": "php",
+    ".rb": "ruby",
+    ".sql": "sql",
+    ".sh": "bash",
+    ".html": "html",
+    ".css": "css",
+    ".yaml": "yaml",
+    ".yml": "yaml",
+    ".json": "json",
+    ".md": "markdown",
+    ".csv": "csv",
+    ".txt": "text",
     ".pdf": "pdf",
 }
 
@@ -77,7 +122,7 @@ def resolve_upload_path(uploads_dir: Path, filename: str) -> Path:
     target = (uploads_dir / safe_name).resolve()
 
     if uploads_dir not in target.parents and target != uploads_dir:
-        raise ValidationFailure(
+        raise ValidationFailedError(
             "Rejected an upload path that escaped the uploads directory.",
             code="path_traversal_blocked",
         )
@@ -93,7 +138,7 @@ def resolve_upload_path(uploads_dir: Path, filename: str) -> Path:
 def check_extension(filename: str) -> str:
     extension = Path(filename).suffix.lower()
     if extension not in SUPPORTED_EXTENSIONS:
-        raise ValidationFailure(
+        raise ValidationFailedError(
             f"Bread does not index '{extension or 'files with no extension'}'.",
             code="unsupported_file_type",
             hint="Supported types: " + ", ".join(sorted(SUPPORTED_EXTENSIONS)),
@@ -112,10 +157,7 @@ def load_document(path: Path) -> LoadedDocument:
     payload = path.read_bytes()
     digest = hash_bytes(payload)
 
-    if extension == ".pdf":
-        text = _extract_pdf_text(path)
-    else:
-        text = _decode_text(payload)
+    text = _extract_pdf_text(path) if extension == ".pdf" else _decode_text(payload)
 
     return LoadedDocument(
         text=text,

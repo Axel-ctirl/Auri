@@ -46,7 +46,11 @@ def test_config_paths_outside_the_repo_are_refused(client):
 def test_missing_config_is_a_clean_404(client):
     response = client.post(
         "/api/training/start",
-        json={"name": "nope", "config_path": "configs/training/nope.yaml", "dry_run": True},
+        json={
+            "name": "nope",
+            "config_path": "configs/training/nope.yaml",
+            "dry_run": True,
+        },
     )
     assert response.status_code == 404
 
@@ -90,7 +94,11 @@ def test_stopping_a_run_that_is_not_running_conflicts(client):
 def test_preflight_flags_a_missing_dataset(bread_env):
     from pathlib import Path
 
-    from app.services.training_service import load_config, preflight, resolve_config_path
+    from app.services.training_service import (
+        load_config,
+        preflight,
+        resolve_config_path,
+    )
 
     config = load_config(resolve_config_path("configs/training/qlora_7b.yaml"))
     problems = preflight(config, Path("/definitely/not/here.jsonl"))

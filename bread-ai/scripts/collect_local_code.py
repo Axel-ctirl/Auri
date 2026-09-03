@@ -23,9 +23,9 @@ import argparse
 import sys
 from pathlib import Path
 
-from _bootstrap import REPO_ROOT, print_header, print_table, resolve_output  # noqa: E402
+from _bootstrap import REPO_ROOT, print_header, print_table, resolve_output
 
-from app.services.datasets import (  # noqa: E402
+from app.services.datasets import (
     DEFAULT_ALLOWED_LICENSES,
     SUPPORTED_LANGUAGES,
     CollectionOptions,
@@ -120,7 +120,7 @@ def main(argv: list[str] | None = None) -> int:
         {
             "paths": ", ".join(str(root) for root in roots),
             "languages": ", ".join(args.languages),
-            "allowed licenses": ", ".join(allowed) if not args.allow_unlicensed else "any",
+            "allowed licenses": (", ".join(allowed) if not args.allow_unlicensed else "any"),
             "max records": args.max_records,
             "output": output_path,
         }
@@ -128,7 +128,9 @@ def main(argv: list[str] | None = None) -> int:
     print()
 
     written, manifest = collect_local_code(
-        roots, options, progress=lambda count: print(f"  ... {count} records", flush=True)
+        roots,
+        options,
+        progress=lambda count: print(f"  ... {count} records", flush=True),
     )
 
     print_header("Result")

@@ -9,14 +9,20 @@ from __future__ import annotations
 
 import json
 from collections.abc import Iterator
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 from urllib.parse import urlparse
 
 import httpx
 
 from ...errors import BackendUnavailableError, BreadError
-from .base import BackendStatus, ChatTurn, GenerationParams, InferenceBackend, StopSignal
+from .base import (
+    BackendStatus,
+    ChatTurn,
+    GenerationParams,
+    InferenceBackend,
+    StopSignal,
+)
 
 LOCAL_HOSTS = {"127.0.0.1", "localhost", "::1", "0.0.0.0"}
 
@@ -58,7 +64,7 @@ class OpenAICompatBackend(InferenceBackend):
                 details={"base_url": self.base_url, "original_error": str(exc)},
             ) from exc
         self._reachable = True
-        self.loaded_at = datetime.now(timezone.utc)
+        self.loaded_at = datetime.now(UTC)
         self.load_seconds = 0.0
         if not self.model:
             payload = response.json()
@@ -85,7 +91,10 @@ class OpenAICompatBackend(InferenceBackend):
         )
 
     def _headers(self) -> dict[str, str]:
-        return {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}
+        return {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+        }
 
     def stream(
         self,

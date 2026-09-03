@@ -42,7 +42,9 @@ def load_script(name: str):
 
     if str(SCRIPTS_DIR) not in sys.path:
         sys.path.insert(0, str(SCRIPTS_DIR))
-    spec = importlib.util.spec_from_file_location(f"bread_script_{name}", SCRIPTS_DIR / f"{name}.py")
+    spec = importlib.util.spec_from_file_location(
+        f"bread_script_{name}", SCRIPTS_DIR / f"{name}.py"
+    )
     assert spec and spec.loader
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -73,10 +75,14 @@ def test_full_pipeline_from_collection_to_training_file(sample_project, tmp_path
     raw = tmp_path / "raw.jsonl"
     exit_code = load_script("collect_local_code").main(
         [
-            "--path", str(sample_project),
-            "--name", "pipeline",
-            "--output", str(raw),
-            "--languages", "python",
+            "--path",
+            str(sample_project),
+            "--name",
+            "pipeline",
+            "--output",
+            str(raw),
+            "--languages",
+            "python",
         ]
     )
     capsys.readouterr()
@@ -102,7 +108,14 @@ def test_full_pipeline_from_collection_to_training_file(sample_project, tmp_path
     training_file = tmp_path / "sft.jsonl"
     assert (
         load_script("build_sft_dataset").main(
-            ["--input", str(cleaned), "--output", str(training_file), "--eval-ratio", "0.2"]
+            [
+                "--input",
+                str(cleaned),
+                "--output",
+                str(training_file),
+                "--eval-ratio",
+                "0.2",
+            ]
         )
         == 0
     )
@@ -150,8 +163,10 @@ def test_training_script_reports_a_missing_dataset(tmp_path):
     with pytest.raises(SystemExit) as raised:
         load_script("train_qlora").main(
             [
-                "--config", "configs/training/qlora_7b.yaml",
-                "--dataset", str(tmp_path / "absent.jsonl"),
+                "--config",
+                "configs/training/qlora_7b.yaml",
+                "--dataset",
+                str(tmp_path / "absent.jsonl"),
                 "--dry-run",
             ]
         )

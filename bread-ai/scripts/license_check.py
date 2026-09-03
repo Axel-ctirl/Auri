@@ -53,7 +53,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--path", action="append", required=True, dest="paths")
     parser.add_argument("--max-depth", type=int, default=3)
     parser.add_argument(
-        "--allow-license", action="append", default=[], metavar="LICENSE_ID",
+        "--allow-license",
+        action="append",
+        default=[],
+        metavar="LICENSE_ID",
         help="Treat this license as allowed for the purpose of this report.",
     )
     args = parser.parse_args(argv)

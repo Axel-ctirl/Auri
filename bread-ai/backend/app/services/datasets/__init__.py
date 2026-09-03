@@ -12,7 +12,13 @@ from .collect import (
 )
 from .licenses import DEFAULT_ALLOWED_LICENSES, detect_repository_license, is_allowed
 from .manifest import DatasetManifest, standard_warnings
-from .quality import build_report, clean_file, clean_records, dedupe_records, validate_file
+from .quality import (
+    build_report,
+    clean_file,
+    clean_records,
+    dedupe_records,
+    validate_file,
+)
 from .records import (
     RecordMeta,
     make_chat_record,

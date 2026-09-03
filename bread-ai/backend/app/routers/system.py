@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends
 
@@ -20,7 +20,7 @@ def health(settings: Settings = Depends(get_settings)) -> HealthResponse:
     return HealthResponse(
         app=settings.app_name,
         version=settings.app_version,
-        time=datetime.now(timezone.utc),
+        time=datetime.now(UTC),
     )
 
 

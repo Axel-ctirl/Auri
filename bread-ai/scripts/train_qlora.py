@@ -36,7 +36,6 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-
 from _bootstrap import REPO_ROOT, print_header, print_table
 
 
@@ -63,9 +62,7 @@ def require(package: str, install_hint: str) -> None:
     try:
         __import__(package)
     except ImportError:
-        raise SystemExit(
-            f"error: '{package}' is not installed.\n       {install_hint}"
-        ) from None
+        raise SystemExit(f"error: '{package}' is not installed.\n       {install_hint}") from None
 
 
 def build_argument_parser() -> argparse.ArgumentParser:
@@ -104,7 +101,10 @@ def format_examples(dataset, tokenizer, config: dict[str, Any]):
             messages = [
                 {"role": "system", "content": system_fallback},
                 {"role": "user", "content": user},
-                {"role": "assistant", "content": record.get("output") or record.get("text", "")},
+                {
+                    "role": "assistant",
+                    "content": record.get("output") or record.get("text", ""),
+                },
             ]
         if messages and messages[0].get("role") != "system":
             messages = [{"role": "system", "content": system_fallback}, *messages]
@@ -113,8 +113,7 @@ def format_examples(dataset, tokenizer, config: dict[str, Any]):
             text = tokenizer.apply_chat_template(messages, tokenize=False)
         else:
             text = "\n\n".join(
-                f"### {message['role'].capitalize()}\n{message['content']}"
-                for message in messages
+                f"### {message['role'].capitalize()}\n{message['content']}" for message in messages
             )
         return {"text": text}
 
@@ -245,7 +244,8 @@ def main(argv: list[str] | None = None) -> int:
 
     if config.get("load_in_4bit", True):
         model = prepare_model_for_kbit_training(
-            model, use_gradient_checkpointing=bool(config.get("gradient_checkpointing", True))
+            model,
+            use_gradient_checkpointing=bool(config.get("gradient_checkpointing", True)),
         )
 
     lora_config = LoraConfig(
@@ -332,7 +332,7 @@ def main(argv: list[str] | None = None) -> int:
         {
             "adapter": adapter_dir,
             "steps": trainer.state.global_step,
-            "final train loss": round(float(final_loss), 4) if final_loss is not None else "n/a",
+            "final train loss": (round(float(final_loss), 4) if final_loss is not None else "n/a"),
             "perplexity": (
                 round(math.exp(float(final_loss)), 2)
                 if final_loss is not None and float(final_loss) < 20

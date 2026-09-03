@@ -44,7 +44,10 @@ def create_space(
     session.commit()
     session.refresh(space)
     record_action(
-        session, "knowledge_space.create", target_type="knowledge_space", target_id=space.id,
+        session,
+        "knowledge_space.create",
+        target_type="knowledge_space",
+        target_id=space.id,
         detail={"name": space.name},
     )
     return KnowledgeSpaceOut(**space.model_dump())
@@ -81,6 +84,9 @@ def delete_space(
         raise NotFoundError(f"Knowledge space {space_id} does not exist.")
     ingest.remove_space(session, settings, space)
     record_action(
-        session, "knowledge_space.delete", target_type="knowledge_space", target_id=space_id
+        session,
+        "knowledge_space.delete",
+        target_type="knowledge_space",
+        target_id=space_id,
     )
     return DeleteResponse(deleted=True, id=space_id)

@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 import platform
 from dataclasses import asdict, dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -32,7 +32,7 @@ class DatasetManifest:
     accepted_terms: bool = False
     accepted_terms_at: str | None = None
     collected_at: str = field(
-        default_factory=lambda: datetime.now(timezone.utc).isoformat(timespec="seconds")
+        default_factory=lambda: datetime.now(UTC).isoformat(timespec="seconds")
     )
     collector_host: str = field(default_factory=platform.node)
     warnings: list[str] = field(default_factory=list)
@@ -42,7 +42,9 @@ class DatasetManifest:
         return asdict(self)
 
     def write(self, path: Path | None = None) -> Path:
-        target = Path(path) if path else Path(self.output_path).with_suffix(".manifest.json")
+        target = (
+            Path(path) if path else Path(self.output_path).with_suffix(".manifest.json")
+        )
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(json.dumps(self.as_dict(), indent=2), encoding="utf-8")
         return target

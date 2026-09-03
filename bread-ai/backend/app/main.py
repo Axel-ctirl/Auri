@@ -14,13 +14,13 @@ from __future__ import annotations
 
 import logging
 from contextlib import asynccontextmanager
-from pathlib import Path
 
 from fastapi import APIRouter, Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from sqlmodel import Session
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from .config import REPO_ROOT, get_settings
 from .db import get_engine, init_db
@@ -34,9 +34,11 @@ from .routers import (
     knowledge,
     models,
     prompts,
-    settings as settings_router,
     system,
     training,
+)
+from .routers import (
+    settings as settings_router,
 )
 from .security import RateLimiter, caller_identity, ensure_lan_guard, require_api_key
 
@@ -159,6 +161,11 @@ def _mount_frontend(app: FastAPI) -> None:
 
     @app.get("/{full_path:path}", include_in_schema=False)
     async def spa_fallback(full_path: str) -> FileResponse:
+        # The catch-all must not swallow unknown API routes: a client asking for
+        # /api/typo deserves a 404 with a JSON body, not the HTML shell.
+        if full_path == "api" or full_path.startswith("api/"):
+            raise StarletteHTTPException(status_code=404, detail="No such API route.")
+
         candidate = (dist / full_path).resolve()
         if dist.resolve() in candidate.parents and candidate.is_file():
             return FileResponse(candidate)

@@ -14,7 +14,7 @@ from collections import defaultdict, deque
 from dataclasses import dataclass
 
 from fastapi import Depends, Request
-from sqlmodel import Session, select
+from sqlmodel import Session, col, select
 
 from .config import Settings, get_settings
 from .db import get_session
@@ -96,7 +96,7 @@ def require_api_key(
 
 def _lookup(session: Session, plaintext: str) -> ApiKey | None:
     digest = hash_key(plaintext)
-    statement = select(ApiKey).where(ApiKey.key_hash == digest, ApiKey.revoked == False)  # noqa: E712
+    statement = select(ApiKey).where(ApiKey.key_hash == digest, col(ApiKey.revoked).is_(False))
     return session.exec(statement).first()
 
 
@@ -164,7 +164,5 @@ def ensure_lan_guard(settings: Settings) -> list[str]:
             "so create a key before other machines can use this server."
         )
     if not settings.allow_lan_binding:
-        warnings.append(
-            "Set BREAD_ALLOW_LAN_BINDING=true to confirm you meant to expose Bread."
-        )
+        warnings.append("Set BREAD_ALLOW_LAN_BINDING=true to confirm you meant to expose Bread.")
     return warnings

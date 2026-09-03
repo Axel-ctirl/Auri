@@ -10,12 +10,18 @@ from __future__ import annotations
 import threading
 import time
 from collections.abc import Iterator
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 from ...errors import BackendUnavailableError, BreadError
-from .base import BackendStatus, ChatTurn, GenerationParams, InferenceBackend, StopSignal
+from .base import (
+    BackendStatus,
+    ChatTurn,
+    GenerationParams,
+    InferenceBackend,
+    StopSignal,
+)
 
 
 class LlamaCppBackend(InferenceBackend):
@@ -78,7 +84,7 @@ class LlamaCppBackend(InferenceBackend):
             if self.chat_format:
                 kwargs["chat_format"] = self.chat_format
             self._llm = Llama(**kwargs)
-            self.loaded_at = datetime.now(timezone.utc)
+            self.loaded_at = datetime.now(UTC)
             self.load_seconds = round(time.perf_counter() - started, 2)
 
     def unload(self) -> None:

@@ -48,7 +48,7 @@ def main(argv: list[str] | None = None) -> int:
     print_header(f"Downloading {args.model_id}")
     print_table(
         {
-            "estimated size": f"{size} GB" if size else "unknown (check the model card)",
+            "estimated size": (f"{size} GB" if size else "unknown (check the model card)"),
             "revision": args.revision or "(default branch)",
             "destination": "your Hugging Face cache (HF_HOME or ~/.cache/huggingface)",
         }
@@ -66,8 +66,7 @@ def main(argv: list[str] | None = None) -> int:
         from huggingface_hub import snapshot_download
     except ImportError:
         print(
-            "error: huggingface_hub is not installed. "
-            "pip install -r requirements-inference.txt",
+            "error: huggingface_hub is not installed. " "pip install -r requirements-inference.txt",
             file=sys.stderr,
         )
         return 3
@@ -75,7 +74,7 @@ def main(argv: list[str] | None = None) -> int:
     print("\nStarting. This can take a while and is resumable.\n")
     try:
         path = snapshot_download(repo_id=args.model_id, revision=args.revision)
-    except Exception as exc:  # noqa: BLE001 - the user needs the real reason
+    except Exception as exc:
         print(f"error: download failed: {type(exc).__name__}: {exc}", file=sys.stderr)
         return 4
 

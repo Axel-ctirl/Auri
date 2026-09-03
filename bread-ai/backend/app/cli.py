@@ -1,10 +1,10 @@
 """Bread's command line interface.
 
-    python -m app.cli serve            # start the API (localhost by default)
-    python -m app.cli status           # GPU, dependencies, loaded model
-    python -m app.cli create-key       # mint an API key for LAN use
-    python -m app.cli init-db          # create tables and seed defaults
-    python -m app.cli check            # one-shot environment report
+python -m app.cli serve            # start the API (localhost by default)
+python -m app.cli status           # GPU, dependencies, loaded model
+python -m app.cli create-key       # mint an API key for LAN use
+python -m app.cli init-db          # create tables and seed defaults
+python -m app.cli check            # one-shot environment report
 """
 
 from __future__ import annotations
@@ -136,7 +136,9 @@ def status() -> None:
 
 
 @app.command()
-def check(json_output: bool = typer.Option(False, "--json", help="Machine-readable output.")) -> None:
+def check(
+    json_output: bool = typer.Option(False, "--json", help="Machine-readable output.")
+) -> None:
     """Environment report suitable for pasting into a bug report."""
 
     settings = get_settings()

@@ -6,11 +6,18 @@ import hashlib
 import re
 import statistics
 from collections import Counter
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
-from .records import detect_schema, read_jsonl, record_text, validate_record, write_jsonl
+from .records import (
+    detect_schema,
+    read_jsonl,
+    record_text,
+    validate_record,
+    write_jsonl,
+)
 from .secrets import contains_secret, redact
 
 MIN_RECORD_CHARS = 40
@@ -172,14 +179,16 @@ def _minhash(text: str, permutations: int = 64) -> tuple[int, ...]:
         return tuple([0] * permutations)
     sketch = []
     for salt in range(permutations):
-        sketch.append(min((shingle ^ (salt * 0x9E3779B1)) & 0xFFFFFFFF for shingle in shingle_set))
+        sketch.append(
+            min((shingle ^ (salt * 0x9E3779B1)) & 0xFFFFFFFF for shingle in shingle_set)
+        )
     return tuple(sketch)
 
 
 def _sketch_similarity(left: tuple[int, ...], right: tuple[int, ...]) -> float:
     if not left or not right:
         return 0.0
-    matches = sum(1 for a, b in zip(left, right) if a == b)
+    matches = sum(1 for a, b in zip(left, right, strict=True) if a == b)
     return matches / len(left)
 
 
@@ -208,7 +217,9 @@ def dedupe_records(
     for record in records:
         stats.read += 1
         text = record_text(record)
-        digest = hashlib.sha256(re.sub(r"\s+", " ", text).strip().encode("utf-8")).hexdigest()
+        digest = hashlib.sha256(
+            re.sub(r"\s+", " ", text).strip().encode("utf-8")
+        ).hexdigest()
         if digest in seen_hashes:
             stats.exact_duplicates += 1
             continue
@@ -268,7 +279,9 @@ def validate_file(
         if error or record is None:
             report.invalid_records += 1
             if len(report.issues) < max_issues:
-                report.issues.append({"line": line_number, "field": None, "problem": error})
+                report.issues.append(
+                    {"line": line_number, "field": None, "problem": error}
+                )
             continue
 
         problems = validate_record(record, schema_name)
@@ -276,11 +289,15 @@ def validate_file(
             report.invalid_records += 1
             for problem in problems:
                 if len(report.issues) < max_issues:
-                    report.issues.append({"line": line_number, "field": None, "problem": problem})
+                    report.issues.append(
+                        {"line": line_number, "field": None, "problem": problem}
+                    )
             continue
 
         text = record_text(record)
-        digest = hashlib.sha256(re.sub(r"\s+", " ", text).strip().encode("utf-8")).hexdigest()
+        digest = hashlib.sha256(
+            re.sub(r"\s+", " ", text).strip().encode("utf-8")
+        ).hexdigest()
         if digest in seen:
             report.duplicate_records += 1
         seen.add(digest)
@@ -368,7 +385,9 @@ def clean_file(
     redact_secrets: bool = True,
     drop_secret_records: bool = False,
 ) -> dict[str, Any]:
-    records = [record for _n, record, error in read_jsonl(input_path) if record and not error]
+    records = [
+        record for _n, record, error in read_jsonl(input_path) if record and not error
+    ]
     cleaned, clean_stats = clean_records(
         records, redact_secrets=redact_secrets, drop_secret_records=drop_secret_records
     )

@@ -11,9 +11,11 @@ Three rules govern this module:
 from __future__ import annotations
 
 import os
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass
+from datetime import UTC
 from pathlib import Path
-from typing import Any, Callable, Iterator
+from typing import Any
 
 from .licenses import (
     DEFAULT_ALLOWED_LICENSES,
@@ -60,15 +62,46 @@ EXTENSION_TO_LANGUAGE = {
 ENGLISH_EXTENSIONS = (".txt", ".md", ".markdown", ".rst")
 
 SKIP_DIRECTORIES = {
-    ".git", ".hg", ".svn", "node_modules", "__pycache__", ".venv", "venv", "env",
-    "dist", "build", "out", "target", ".gradle", ".idea", ".vscode", ".next",
-    ".mypy_cache", ".pytest_cache", ".ruff_cache", "vendor", "third_party",
-    "site-packages", ".tox", "coverage", ".nuxt", "bin", "obj",
+    ".git",
+    ".hg",
+    ".svn",
+    "node_modules",
+    "__pycache__",
+    ".venv",
+    "venv",
+    "env",
+    "dist",
+    "build",
+    "out",
+    "target",
+    ".gradle",
+    ".idea",
+    ".vscode",
+    ".next",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".ruff_cache",
+    "vendor",
+    "third_party",
+    "site-packages",
+    ".tox",
+    "coverage",
+    ".nuxt",
+    "bin",
+    "obj",
 }
 
 SKIP_FILE_HINTS = (
-    ".min.js", ".min.css", ".lock", "-lock.json", ".map", ".snap",
-    "package-lock.json", "yarn.lock", "poetry.lock", "Cargo.lock",
+    ".min.js",
+    ".min.css",
+    ".lock",
+    "-lock.json",
+    ".map",
+    ".snap",
+    "package-lock.json",
+    "yarn.lock",
+    "poetry.lock",
+    "Cargo.lock",
 )
 
 DEFAULT_MAX_FILE_BYTES = 512 * 1024
@@ -161,8 +194,16 @@ def iter_source_files(
 
 
 PROJECT_MARKERS = (
-    ".git", "package.json", "pyproject.toml", "Cargo.toml", "go.mod",
-    "pom.xml", "build.gradle", "build.gradle.kts", "composer.json", "Gemfile",
+    ".git",
+    "package.json",
+    "pyproject.toml",
+    "Cargo.toml",
+    "go.mod",
+    "pom.xml",
+    "build.gradle",
+    "build.gradle.kts",
+    "composer.json",
+    "Gemfile",
 )
 
 
@@ -220,7 +261,9 @@ def collect_local_code(
             license_cache[repo_root] = detect_repository_license(repo_root).license_id
         license_id = license_cache[repo_root]
 
-        if options.require_license and not is_allowed(license_id, options.allowed_licenses):
+        if options.require_license and not is_allowed(
+            license_id, options.allowed_licenses
+        ):
             skipped_license += 1
             continue
 
@@ -361,7 +404,9 @@ def collect_huggingface(
     descriptor = EXTERNAL_SOURCES.get(source, {})
     dataset_name = options.dataset_name or descriptor.get("dataset_name")
     if not dataset_name:
-        raise ValueError(f"No Hugging Face dataset is configured for source '{source}'.")
+        raise ValueError(
+            f"No Hugging Face dataset is configured for source '{source}'."
+        )
 
     try:
         from datasets import load_dataset
@@ -393,10 +438,13 @@ def collect_huggingface(
             continue
         if len(text) > options.max_file_bytes:
             continue
-        if options.require_license and license_id != "UNKNOWN":
-            if not is_allowed(license_id, options.allowed_licenses):
-                skipped_license += 1
-                continue
+        if (
+            options.require_license
+            and license_id != "UNKNOWN"
+            and not is_allowed(license_id, options.allowed_licenses)
+        ):
+            skipped_license += 1
+            continue
         if options.skip_secrets and contains_secret(text):
             skipped_secret += 1
             continue
@@ -407,7 +455,9 @@ def collect_huggingface(
             license=license_id,
             language=language,
         )
-        docstring = row.get("func_documentation_string") if isinstance(row, dict) else None
+        docstring = (
+            row.get("func_documentation_string") if isinstance(row, dict) else None
+        )
         if source == "codesearchnet" and docstring:
             record = make_chat_record(
                 system="You are Bread, a local coding assistant.",
@@ -423,7 +473,7 @@ def collect_huggingface(
         language_counts[language] = language_counts.get(language, 0) + 1
 
     written = write_jsonl(options.output_path, records)
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     manifest = DatasetManifest(
         name=options.name,
@@ -449,7 +499,7 @@ def collect_huggingface(
             "max_record_bytes": options.max_file_bytes,
         },
         accepted_terms=True,
-        accepted_terms_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        accepted_terms_at=datetime.now(UTC).isoformat(timespec="seconds"),
         warnings=standard_warnings(source),
     )
     manifest.write()

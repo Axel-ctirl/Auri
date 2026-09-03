@@ -66,12 +66,8 @@ def gpu_status() -> dict[str, Any]:
                     "name": properties.name,
                     "total_memory_mb": round(total_bytes / (1024**2), 1),
                     "free_memory_mb": round(free_bytes / (1024**2), 1),
-                    "allocated_memory_mb": round(
-                        torch.cuda.memory_allocated(index) / (1024**2), 1
-                    ),
-                    "reserved_memory_mb": round(
-                        torch.cuda.memory_reserved(index) / (1024**2), 1
-                    ),
+                    "allocated_memory_mb": round(torch.cuda.memory_allocated(index) / (1024**2), 1),
+                    "reserved_memory_mb": round(torch.cuda.memory_reserved(index) / (1024**2), 1),
                     "capability": f"{properties.major}.{properties.minor}",
                 }
             )

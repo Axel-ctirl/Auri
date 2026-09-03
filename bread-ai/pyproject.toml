@@ -22,7 +22,8 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "backend/tests/*" = ["S101"]
-"scripts/*" = ["T201"]  # scripts print on purpose
+"scripts/*" = ["T201"]                    # scripts print on purpose
+"scripts/train_tiny_scratch.py" = ["N812"]  # `functional as F` is universal in PyTorch code
 
 [tool.ruff.lint.isort]
 known-first-party = ["app"]

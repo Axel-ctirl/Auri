@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
-from sqlmodel import Session, delete, select
+from sqlmodel import Session, col, delete, select
 
 from ...config import Settings
 from ...errors import NotFoundError
@@ -79,21 +79,23 @@ def index_documents(
 
         try:
             loaded = load_document(path)
-        except Exception as exc:  # noqa: BLE001 - one bad file must not stop the batch
+        except Exception as exc:
             document.status = "failed"
             document.error = str(exc)
             session.add(document)
             failures.append({"document_id": document.id, "error": str(exc)})
             continue
 
-        already_indexed = document.status == "indexed" and document.content_hash == loaded.content_hash
+        already_indexed = (
+            document.status == "indexed" and document.content_hash == loaded.content_hash
+        )
         if already_indexed and not force:
             skipped += 1
             continue
 
         # Replace any previous vectors for this document so re-indexing is not additive.
         store.delete_document(space.id, document.id)
-        session.exec(delete(DocumentChunk).where(DocumentChunk.document_id == document.id))
+        session.exec(delete(DocumentChunk).where(col(DocumentChunk.document_id) == document.id))
 
         chunks = chunk_text(
             loaded.text,
@@ -193,7 +195,9 @@ def search(
     """Return citation dicts, the embedding model used, and whether reranking ran."""
 
     if not space_id:
-        space = session.exec(select(KnowledgeSpace).order_by(KnowledgeSpace.created_at)).first()
+        space = session.exec(
+            select(KnowledgeSpace).order_by(col(KnowledgeSpace.created_at))
+        ).first()
         if space is None:
             return [], "", False
         space_id = space.id
@@ -245,7 +249,7 @@ def _rerank(query: str, hits: list[SearchHit], settings: Settings) -> tuple[list
         return hits, False
 
     scores = encoder.predict([(query, hit.text) for hit in hits])
-    ordered = sorted(zip(hits, scores), key=lambda pair: float(pair[1]), reverse=True)
+    ordered = sorted(zip(hits, scores, strict=True), key=lambda pair: float(pair[1]), reverse=True)
     rescored = []
     for hit, score in ordered:
         hit.score = float(score)
@@ -257,7 +261,7 @@ def remove_document(session: Session, settings: Settings, document: Document) ->
     """Delete a document, its chunks, its vectors and its file on disk."""
 
     _store(settings).delete_document(document.knowledge_space_id, document.id)
-    session.exec(delete(DocumentChunk).where(DocumentChunk.document_id == document.id))
+    session.exec(delete(DocumentChunk).where(col(DocumentChunk.document_id) == document.id))
 
     stored = Path(document.stored_path)
     uploads_root = settings.uploads_dir.resolve()
@@ -276,9 +280,7 @@ def remove_document(session: Session, settings: Settings, document: Document) ->
 
 
 def remove_space(session: Session, settings: Settings, space: KnowledgeSpace) -> None:
-    documents = session.exec(
-        select(Document).where(Document.knowledge_space_id == space.id)
-    ).all()
+    documents = session.exec(select(Document).where(Document.knowledge_space_id == space.id)).all()
     for document in documents:
         remove_document(session, settings, document)
     _store(settings).delete_space(space.id)

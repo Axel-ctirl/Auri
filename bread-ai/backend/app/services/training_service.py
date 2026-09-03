@@ -7,6 +7,7 @@ close the browser without killing the run.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import re
@@ -21,7 +22,7 @@ import yaml
 from sqlmodel import Session, select
 
 from ..config import REPO_ROOT, Settings
-from ..errors import ConflictError, NotFoundError, ValidationFailure
+from ..errors import ConflictError, NotFoundError, ValidationFailedError
 from ..models import TrainingCheckpoint, TrainingRun, utcnow
 
 SCRIPTS_DIR = REPO_ROOT / "scripts"
@@ -59,7 +60,7 @@ def resolve_config_path(raw_path: str) -> Path:
     resolved = (candidate if candidate.is_absolute() else (REPO_ROOT / candidate)).resolve()
     config_root = CONFIG_ROOT.resolve()
     if config_root != resolved and config_root not in resolved.parents:
-        raise ValidationFailure(
+        raise ValidationFailedError(
             "Training configs must live under configs/.",
             code="config_outside_repo",
             hint="Copy your YAML into configs/training/ and pass that path.",
@@ -73,7 +74,7 @@ def load_config(path: Path) -> dict[str, Any]:
     with path.open("r", encoding="utf-8") as handle:
         loaded = yaml.safe_load(handle) or {}
     if not isinstance(loaded, dict):
-        raise ValidationFailure(f"{path} must contain a YAML mapping.")
+        raise ValidationFailedError(f"{path} must contain a YAML mapping.")
     return loaded
 
 
@@ -158,7 +159,7 @@ def start_run(session: Session, settings: Settings, request: Any) -> TrainingRun
         session.add(run)
         session.commit()
         session.refresh(run)
-        raise ValidationFailure(
+        raise ValidationFailedError(
             "The run cannot start yet.",
             code="training_preflight_failed",
             details={"problems": problems, "run_id": run.id},
@@ -190,7 +191,7 @@ def start_run(session: Session, settings: Settings, request: Any) -> TrainingRun
     environment = os.environ.copy()
     environment["PYTHONUNBUFFERED"] = "1"
 
-    process = subprocess.Popen(  # noqa: S603 - argv is built from validated paths
+    process = subprocess.Popen(
         command,
         cwd=str(REPO_ROOT),
         stdout=subprocess.PIPE,
@@ -298,10 +299,9 @@ def stop_run(session: Session, run_id: str) -> TrainingRun:
         _terminate(process)
     elif run.pid:
         # The server restarted while the run kept going; fall back to the pid.
-        try:
+        # The process may already be gone; the run is marked stopped either way.
+        with contextlib.suppress(OSError, ProcessLookupError):
             os.kill(run.pid, signal.SIGTERM)
-        except (OSError, ProcessLookupError):
-            pass
 
     run.status = "stopped"
     run.finished_at = utcnow()

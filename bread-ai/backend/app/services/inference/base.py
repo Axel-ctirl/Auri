@@ -11,7 +11,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Iterator
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
 
 @dataclass
@@ -30,7 +30,7 @@ class GenerationParams:
     max_new_tokens: int = 1024
     repetition_penalty: float = 1.05
     stop: list[str] = field(default_factory=list)
-    seed: Optional[int] = None
+    seed: int | None = None
 
 
 class StopSignal:
@@ -51,17 +51,17 @@ class StopSignal:
 class BackendStatus:
     loaded: bool
     backend: str
-    model_id: Optional[str] = None
-    tokenizer_id: Optional[str] = None
-    adapter_path: Optional[str] = None
-    quantization_mode: Optional[str] = None
-    dtype: Optional[str] = None
-    device: Optional[str] = None
-    context_length: Optional[int] = None
-    loaded_at: Optional[datetime] = None
-    load_seconds: Optional[float] = None
-    vram_allocated_mb: Optional[float] = None
-    detail: Optional[str] = None
+    model_id: str | None = None
+    tokenizer_id: str | None = None
+    adapter_path: str | None = None
+    quantization_mode: str | None = None
+    dtype: str | None = None
+    device: str | None = None
+    context_length: int | None = None
+    loaded_at: datetime | None = None
+    load_seconds: float | None = None
+    vram_allocated_mb: float | None = None
+    detail: str | None = None
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -100,8 +100,7 @@ class InferenceBackend(ABC):
         """Release memory. Must be safe to call when nothing is loaded."""
 
     @abstractmethod
-    def status(self) -> BackendStatus:
-        ...
+    def status(self) -> BackendStatus: ...
 
     @abstractmethod
     def stream(

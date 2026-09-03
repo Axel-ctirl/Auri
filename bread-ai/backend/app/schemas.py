@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, Literal, Optional
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -13,7 +13,7 @@ Role = Literal["system", "user", "assistant"]
 class ErrorBody(BaseModel):
     code: str
     message: str
-    hint: Optional[str] = None
+    hint: str | None = None
     details: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -32,19 +32,19 @@ class HealthResponse(BaseModel):
 class GpuDevice(BaseModel):
     index: int
     name: str
-    total_memory_mb: Optional[float] = None
-    allocated_memory_mb: Optional[float] = None
-    reserved_memory_mb: Optional[float] = None
-    free_memory_mb: Optional[float] = None
-    capability: Optional[str] = None
+    total_memory_mb: float | None = None
+    allocated_memory_mb: float | None = None
+    reserved_memory_mb: float | None = None
+    free_memory_mb: float | None = None
+    capability: str | None = None
 
 
 class GpuStatus(BaseModel):
     cuda_available: bool
     torch_installed: bool
-    torch_version: Optional[str] = None
-    cuda_version: Optional[str] = None
-    driver_version: Optional[str] = None
+    torch_version: str | None = None
+    cuda_version: str | None = None
+    driver_version: str | None = None
     device_count: int = 0
     devices: list[GpuDevice] = Field(default_factory=list)
     notes: list[str] = Field(default_factory=list)
@@ -62,7 +62,7 @@ class SystemStatus(BaseModel):
     data_dir: str
     database_url: str
     rag_enabled: bool
-    model: "ModelStatus"
+    model: ModelStatus
     gpu: GpuStatus
     optional_dependencies: dict[str, bool]
     warnings: list[str] = Field(default_factory=list)
@@ -79,9 +79,9 @@ class ModelSummary(BaseModel):
     quantization_mode: str
     dtype: str
     device: str
-    adapter_path: Optional[str] = None
+    adapter_path: str | None = None
     context_length: int
-    notes: Optional[str] = None
+    notes: str | None = None
     is_builtin: bool
 
 
@@ -91,28 +91,28 @@ class ModelRegisterRequest(BaseModel):
     name: str = Field(min_length=1, max_length=120)
     model_id: str = Field(min_length=1, max_length=300)
     backend: Literal["mock", "transformers", "llama_cpp", "openai_compat"] = "transformers"
-    tokenizer_id: Optional[str] = None
+    tokenizer_id: str | None = None
     quantization_mode: Literal["none", "8bit", "4bit"] = "4bit"
     dtype: str = "bfloat16"
     device: str = "auto"
-    adapter_path: Optional[str] = None
-    gguf_path: Optional[str] = None
-    base_url: Optional[str] = None
+    adapter_path: str | None = None
+    gguf_path: str | None = None
+    base_url: str | None = None
     context_length: int = Field(default=8192, ge=512, le=1_048_576)
-    notes: Optional[str] = None
+    notes: str | None = None
 
 
 class ModelLoadRequest(BaseModel):
     model_config = ConfigDict(protected_namespaces=())
 
-    model_id: Optional[str] = None
-    backend: Optional[Literal["mock", "transformers", "llama_cpp", "openai_compat"]] = None
-    quantization_mode: Optional[Literal["none", "8bit", "4bit"]] = None
-    dtype: Optional[str] = None
-    device: Optional[str] = None
-    adapter_path: Optional[str] = None
-    gguf_path: Optional[str] = None
-    base_url: Optional[str] = None
+    model_id: str | None = None
+    backend: Literal["mock", "transformers", "llama_cpp", "openai_compat"] | None = None
+    quantization_mode: Literal["none", "8bit", "4bit"] | None = None
+    dtype: str | None = None
+    device: str | None = None
+    adapter_path: str | None = None
+    gguf_path: str | None = None
+    base_url: str | None = None
     confirm_download: bool = Field(
         default=False,
         description="Required before Bread may fetch weights that are not already "
@@ -126,17 +126,17 @@ class ModelStatus(BaseModel):
 
     loaded: bool
     backend: str
-    model_id: Optional[str] = None
-    tokenizer_id: Optional[str] = None
-    adapter_path: Optional[str] = None
-    quantization_mode: Optional[str] = None
-    dtype: Optional[str] = None
-    device: Optional[str] = None
-    context_length: Optional[int] = None
-    loaded_at: Optional[datetime] = None
-    load_seconds: Optional[float] = None
-    vram_allocated_mb: Optional[float] = None
-    detail: Optional[str] = None
+    model_id: str | None = None
+    tokenizer_id: str | None = None
+    adapter_path: str | None = None
+    quantization_mode: str | None = None
+    dtype: str | None = None
+    device: str | None = None
+    context_length: int | None = None
+    loaded_at: datetime | None = None
+    load_seconds: float | None = None
+    vram_allocated_mb: float | None = None
+    detail: str | None = None
 
 
 # --------------------------------------------------------------- chat types
@@ -148,23 +148,23 @@ class ChatMessageIn(BaseModel):
 class ChatRequest(BaseModel):
     model_config = ConfigDict(protected_namespaces=())
 
-    conversation_id: Optional[str] = None
+    conversation_id: str | None = None
     message: str = Field(min_length=1)
-    messages: Optional[list[ChatMessageIn]] = Field(
+    messages: list[ChatMessageIn] | None = Field(
         default=None,
         description="Optional explicit history. When omitted Bread loads the stored "
         "conversation from SQLite.",
     )
-    system_prompt: Optional[str] = None
-    model_id: Optional[str] = None
-    temperature: Optional[float] = Field(default=None, ge=0.0, le=2.0)
-    top_p: Optional[float] = Field(default=None, ge=0.0, le=1.0)
-    max_new_tokens: Optional[int] = Field(default=None, ge=1, le=32768)
-    repetition_penalty: Optional[float] = Field(default=None, ge=0.5, le=2.0)
-    rag_enabled: Optional[bool] = None
-    knowledge_space_id: Optional[str] = None
-    rag_top_k: Optional[int] = Field(default=None, ge=1, le=50)
-    preset: Optional[str] = Field(
+    system_prompt: str | None = None
+    model_id: str | None = None
+    temperature: float | None = Field(default=None, ge=0.0, le=2.0)
+    top_p: float | None = Field(default=None, ge=0.0, le=1.0)
+    max_new_tokens: int | None = Field(default=None, ge=1, le=32768)
+    repetition_penalty: float | None = Field(default=None, ge=0.5, le=2.0)
+    rag_enabled: bool | None = None
+    knowledge_space_id: str | None = None
+    rag_top_k: int | None = Field(default=None, ge=1, le=50)
+    preset: str | None = Field(
         default=None, description="Name of a prompt preset under prompts/presets/."
     )
     persist: bool = True
@@ -177,8 +177,8 @@ class Citation(BaseModel):
     chunk_index: int
     score: float
     excerpt: str
-    start_line: Optional[int] = None
-    end_line: Optional[int] = None
+    start_line: int | None = None
+    end_line: int | None = None
 
 
 class ChatResponse(BaseModel):
@@ -190,15 +190,15 @@ class ChatResponse(BaseModel):
     model_id: str
     backend: str
     sources: list[Citation] = Field(default_factory=list)
-    prompt_tokens: Optional[int] = None
-    completion_tokens: Optional[int] = None
+    prompt_tokens: int | None = None
+    completion_tokens: int | None = None
     latency_ms: int = 0
     stopped_early: bool = False
 
 
 class ChatStopRequest(BaseModel):
-    conversation_id: Optional[str] = None
-    stream_id: Optional[str] = None
+    conversation_id: str | None = None
+    stream_id: str | None = None
 
 
 class ChatStopResponse(BaseModel):
@@ -215,11 +215,11 @@ class MessageOut(BaseModel):
     role: Role
     content: str
     sources: list[Citation] = Field(default_factory=list)
-    model_id: Optional[str] = None
-    token_count: Optional[int] = None
-    latency_ms: Optional[int] = None
+    model_id: str | None = None
+    token_count: int | None = None
+    latency_ms: int | None = None
     stopped_early: bool = False
-    error: Optional[str] = None
+    error: str | None = None
     created_at: datetime
 
 
@@ -228,17 +228,17 @@ class ConversationOut(BaseModel):
 
     id: str
     title: str
-    model_id: Optional[str] = None
-    system_prompt: Optional[str] = None
-    temperature: Optional[float] = None
-    top_p: Optional[float] = None
-    max_new_tokens: Optional[int] = None
+    model_id: str | None = None
+    system_prompt: str | None = None
+    temperature: float | None = None
+    top_p: float | None = None
+    max_new_tokens: int | None = None
     rag_enabled: bool = False
-    knowledge_space_id: Optional[str] = None
+    knowledge_space_id: str | None = None
     pinned: bool = False
     archived: bool = False
     message_count: int = 0
-    last_message_preview: Optional[str] = None
+    last_message_preview: str | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -250,47 +250,47 @@ class ConversationDetail(ConversationOut):
 class ConversationCreate(BaseModel):
     model_config = ConfigDict(protected_namespaces=())
 
-    title: Optional[str] = None
-    model_id: Optional[str] = None
-    system_prompt: Optional[str] = None
+    title: str | None = None
+    model_id: str | None = None
+    system_prompt: str | None = None
     rag_enabled: bool = False
-    knowledge_space_id: Optional[str] = None
+    knowledge_space_id: str | None = None
 
 
 class ConversationUpdate(BaseModel):
     model_config = ConfigDict(protected_namespaces=())
 
-    title: Optional[str] = None
-    model_id: Optional[str] = None
-    system_prompt: Optional[str] = None
-    temperature: Optional[float] = Field(default=None, ge=0.0, le=2.0)
-    top_p: Optional[float] = Field(default=None, ge=0.0, le=1.0)
-    max_new_tokens: Optional[int] = Field(default=None, ge=1, le=32768)
-    rag_enabled: Optional[bool] = None
-    knowledge_space_id: Optional[str] = None
-    pinned: Optional[bool] = None
-    archived: Optional[bool] = None
+    title: str | None = None
+    model_id: str | None = None
+    system_prompt: str | None = None
+    temperature: float | None = Field(default=None, ge=0.0, le=2.0)
+    top_p: float | None = Field(default=None, ge=0.0, le=1.0)
+    max_new_tokens: int | None = Field(default=None, ge=1, le=32768)
+    rag_enabled: bool | None = None
+    knowledge_space_id: str | None = None
+    pinned: bool | None = None
+    archived: bool | None = None
 
 
 # --------------------------------------------------------- knowledge spaces
 class KnowledgeSpaceCreate(BaseModel):
     name: str = Field(min_length=1, max_length=120)
-    description: Optional[str] = None
-    chunk_size: Optional[int] = Field(default=None, ge=100, le=8000)
-    chunk_overlap: Optional[int] = Field(default=None, ge=0, le=2000)
+    description: str | None = None
+    chunk_size: int | None = Field(default=None, ge=100, le=8000)
+    chunk_overlap: int | None = Field(default=None, ge=0, le=2000)
 
 
 class KnowledgeSpaceUpdate(BaseModel):
-    name: Optional[str] = Field(default=None, min_length=1, max_length=120)
-    description: Optional[str] = None
-    chunk_size: Optional[int] = Field(default=None, ge=100, le=8000)
-    chunk_overlap: Optional[int] = Field(default=None, ge=0, le=2000)
+    name: str | None = Field(default=None, min_length=1, max_length=120)
+    description: str | None = None
+    chunk_size: int | None = Field(default=None, ge=100, le=8000)
+    chunk_overlap: int | None = Field(default=None, ge=0, le=2000)
 
 
 class KnowledgeSpaceOut(BaseModel):
     id: str
     name: str
-    description: Optional[str] = None
+    description: str | None = None
     embedding_model_id: str
     chunk_size: int
     chunk_overlap: int
@@ -308,12 +308,12 @@ class DocumentOut(BaseModel):
     extension: str
     size_bytes: int
     content_hash: str
-    language: Optional[str] = None
+    language: str | None = None
     status: str
     chunk_count: int
-    error: Optional[str] = None
+    error: str | None = None
     created_at: datetime
-    indexed_at: Optional[datetime] = None
+    indexed_at: datetime | None = None
 
 
 class DocumentUploadResponse(BaseModel):
@@ -322,8 +322,8 @@ class DocumentUploadResponse(BaseModel):
 
 
 class DocumentIndexRequest(BaseModel):
-    knowledge_space_id: Optional[str] = None
-    document_ids: Optional[list[str]] = None
+    knowledge_space_id: str | None = None
+    document_ids: list[str] | None = None
     force: bool = False
 
 
@@ -338,14 +338,14 @@ class DocumentIndexResponse(BaseModel):
 
 class RagSearchRequest(BaseModel):
     query: str = Field(min_length=1)
-    knowledge_space_id: Optional[str] = None
+    knowledge_space_id: str | None = None
     top_k: int = Field(default=5, ge=1, le=50)
-    rerank: Optional[bool] = None
+    rerank: bool | None = None
 
 
 class RagSearchResponse(BaseModel):
     query: str
-    knowledge_space_id: Optional[str]
+    knowledge_space_id: str | None
     results: list[Citation]
     embedding_model_id: str
     reranked: bool = False
@@ -360,13 +360,13 @@ class DatasetRunOut(BaseModel):
     output_path: str
     record_count: int
     accepted_terms: bool
-    terms_url: Optional[str] = None
-    license_summary: Optional[str] = None
-    manifest_json: Optional[str] = None
+    terms_url: str | None = None
+    license_summary: str | None = None
+    manifest_json: str | None = None
     status: str
-    error: Optional[str] = None
+    error: str | None = None
     created_at: datetime
-    finished_at: Optional[datetime] = None
+    finished_at: datetime | None = None
 
 
 class DatasetCollectRequest(BaseModel):
@@ -384,8 +384,8 @@ class DatasetCollectRequest(BaseModel):
     languages: list[str] = Field(default_factory=list)
     max_records: int = Field(default=2000, ge=1, le=1_000_000)
     max_file_bytes: int = Field(default=512 * 1024, ge=1024)
-    hf_dataset: Optional[str] = None
-    hf_config: Optional[str] = None
+    hf_dataset: str | None = None
+    hf_config: str | None = None
     hf_split: str = "train"
     allow_licenses: list[str] = Field(default_factory=list)
     accept_terms: bool = Field(
@@ -400,12 +400,12 @@ class DatasetCollectRequest(BaseModel):
 class DatasetValidateRequest(BaseModel):
     path: str
     schema_name: Literal["sft_chat", "sft_instruction", "raw_text"] = "sft_chat"
-    max_records: Optional[int] = Field(default=None, ge=1)
+    max_records: int | None = Field(default=None, ge=1)
 
 
 class DatasetValidationIssue(BaseModel):
     line: int
-    field: Optional[str] = None
+    field: str | None = None
     problem: str
 
 
@@ -438,8 +438,8 @@ class TrainingStartRequest(BaseModel):
         description="Path to a YAML file under configs/training/, relative to the "
         "repository root."
     )
-    dataset_path: Optional[str] = None
-    base_model_id: Optional[str] = None
+    dataset_path: str | None = None
+    base_model_id: str | None = None
     method: Literal["qlora", "lora", "tiny_scratch"] = "qlora"
     dry_run: bool = Field(
         default=False,
@@ -456,15 +456,15 @@ class TrainingRunOut(BaseModel):
     config_path: str
     output_dir: str
     status: str
-    pid: Optional[int] = None
+    pid: int | None = None
     current_step: int
-    total_steps: Optional[int] = None
-    train_loss: Optional[float] = None
-    eval_loss: Optional[float] = None
-    error: Optional[str] = None
+    total_steps: int | None = None
+    train_loss: float | None = None
+    eval_loss: float | None = None
+    error: str | None = None
     created_at: datetime
-    started_at: Optional[datetime] = None
-    finished_at: Optional[datetime] = None
+    started_at: datetime | None = None
+    finished_at: datetime | None = None
 
 
 class TrainingLogsResponse(BaseModel):
@@ -512,18 +512,18 @@ class SettingsOut(BaseModel):
 class SettingsUpdate(BaseModel):
     model_config = ConfigDict(protected_namespaces=())
 
-    temperature: Optional[float] = Field(default=None, ge=0.0, le=2.0)
-    top_p: Optional[float] = Field(default=None, ge=0.0, le=1.0)
-    repetition_penalty: Optional[float] = Field(default=None, ge=0.5, le=2.0)
-    max_new_tokens: Optional[int] = Field(default=None, ge=1, le=32768)
-    max_context_length: Optional[int] = Field(default=None, ge=512, le=1_048_576)
-    rag_enabled: Optional[bool] = None
-    rag_top_k: Optional[int] = Field(default=None, ge=1, le=50)
-    rag_rerank_enabled: Optional[bool] = None
-    chunk_size: Optional[int] = Field(default=None, ge=100, le=8000)
-    chunk_overlap: Optional[int] = Field(default=None, ge=0, le=2000)
-    allow_model_download: Optional[bool] = None
-    system_prompt_path: Optional[str] = None
+    temperature: float | None = Field(default=None, ge=0.0, le=2.0)
+    top_p: float | None = Field(default=None, ge=0.0, le=1.0)
+    repetition_penalty: float | None = Field(default=None, ge=0.5, le=2.0)
+    max_new_tokens: int | None = Field(default=None, ge=1, le=32768)
+    max_context_length: int | None = Field(default=None, ge=512, le=1_048_576)
+    rag_enabled: bool | None = None
+    rag_top_k: int | None = Field(default=None, ge=1, le=50)
+    rag_rerank_enabled: bool | None = None
+    chunk_size: int | None = Field(default=None, ge=100, le=8000)
+    chunk_overlap: int | None = Field(default=None, ge=0, le=2000)
+    allow_model_download: bool | None = None
+    system_prompt_path: str | None = None
 
 
 # ---------------------------------------------------------------- api keys
@@ -539,7 +539,7 @@ class ApiKeyOut(BaseModel):
     scopes: str
     revoked: bool
     created_at: datetime
-    last_used_at: Optional[datetime] = None
+    last_used_at: datetime | None = None
 
 
 class ApiKeyCreated(ApiKeyOut):

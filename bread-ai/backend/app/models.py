@@ -7,15 +7,14 @@ remote database, no analytics sink, and no background upload.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
 from sqlalchemy import Column, Index, Text
 from sqlmodel import Field, SQLModel
 
 
 def utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def new_id() -> str:
@@ -38,16 +37,14 @@ class Conversation(SQLModel, table=True):
 
     id: str = Field(default_factory=new_id, primary_key=True)
     title: str = Field(default="New chat", index=True)
-    profile_id: Optional[str] = Field(default=None, foreign_key="local_profiles.id")
-    model_id: Optional[str] = Field(default=None)
-    system_prompt: Optional[str] = Field(default=None, sa_column=Column(Text))
-    temperature: Optional[float] = Field(default=None)
-    max_new_tokens: Optional[int] = Field(default=None)
-    top_p: Optional[float] = Field(default=None)
+    profile_id: str | None = Field(default=None, foreign_key="local_profiles.id")
+    model_id: str | None = Field(default=None)
+    system_prompt: str | None = Field(default=None, sa_column=Column(Text))
+    temperature: float | None = Field(default=None)
+    max_new_tokens: int | None = Field(default=None)
+    top_p: float | None = Field(default=None)
     rag_enabled: bool = Field(default=False)
-    knowledge_space_id: Optional[str] = Field(
-        default=None, foreign_key="knowledge_spaces.id"
-    )
+    knowledge_space_id: str | None = Field(default=None, foreign_key="knowledge_spaces.id")
     pinned: bool = Field(default=False)
     archived: bool = Field(default=False)
     created_at: datetime = Field(default_factory=utcnow, index=True)
@@ -63,12 +60,12 @@ class Message(SQLModel, table=True):
     role: str = Field(default="user")  # system | user | assistant
     content: str = Field(default="", sa_column=Column(Text))
     # JSON-encoded list of citation dicts produced by the RAG retriever.
-    sources_json: Optional[str] = Field(default=None, sa_column=Column(Text))
-    model_id: Optional[str] = Field(default=None)
-    token_count: Optional[int] = Field(default=None)
-    latency_ms: Optional[int] = Field(default=None)
+    sources_json: str | None = Field(default=None, sa_column=Column(Text))
+    model_id: str | None = Field(default=None)
+    token_count: int | None = Field(default=None)
+    latency_ms: int | None = Field(default=None)
     stopped_early: bool = Field(default=False)
-    error: Optional[str] = Field(default=None, sa_column=Column(Text))
+    error: str | None = Field(default=None, sa_column=Column(Text))
     created_at: datetime = Field(default_factory=utcnow, index=True)
 
 
@@ -88,16 +85,16 @@ class ModelRecord(SQLModel, table=True):
     id: str = Field(default_factory=new_id, primary_key=True)
     name: str = Field(index=True)
     model_id: str = Field(default="")
-    tokenizer_id: Optional[str] = Field(default=None)
+    tokenizer_id: str | None = Field(default=None)
     backend: str = Field(default="mock")
     quantization_mode: str = Field(default="none")
     dtype: str = Field(default="bfloat16")
     device: str = Field(default="auto")
-    adapter_path: Optional[str] = Field(default=None)
-    gguf_path: Optional[str] = Field(default=None)
-    base_url: Optional[str] = Field(default=None)
+    adapter_path: str | None = Field(default=None)
+    gguf_path: str | None = Field(default=None)
+    base_url: str | None = Field(default=None)
     context_length: int = Field(default=8192)
-    notes: Optional[str] = Field(default=None, sa_column=Column(Text))
+    notes: str | None = Field(default=None, sa_column=Column(Text))
     is_builtin: bool = Field(default=False)
     created_at: datetime = Field(default_factory=utcnow)
 
@@ -107,7 +104,7 @@ class KnowledgeSpace(SQLModel, table=True):
 
     id: str = Field(default_factory=new_id, primary_key=True)
     name: str = Field(index=True)
-    description: Optional[str] = Field(default=None, sa_column=Column(Text))
+    description: str | None = Field(default=None, sa_column=Column(Text))
     embedding_model_id: str = Field(default="")
     chunk_size: int = Field(default=900)
     chunk_overlap: int = Field(default=150)
@@ -125,15 +122,15 @@ class Document(SQLModel, table=True):
     filename: str = Field(default="")
     stored_path: str = Field(default="")
     extension: str = Field(default="")
-    media_type: Optional[str] = Field(default=None)
+    media_type: str | None = Field(default=None)
     size_bytes: int = Field(default=0)
     content_hash: str = Field(default="", index=True)
-    language: Optional[str] = Field(default=None)
+    language: str | None = Field(default=None)
     status: str = Field(default="uploaded")  # uploaded | indexed | failed | skipped
     chunk_count: int = Field(default=0)
-    error: Optional[str] = Field(default=None, sa_column=Column(Text))
+    error: str | None = Field(default=None, sa_column=Column(Text))
     created_at: datetime = Field(default_factory=utcnow, index=True)
-    indexed_at: Optional[datetime] = Field(default=None)
+    indexed_at: datetime | None = Field(default=None)
 
 
 class DocumentChunk(SQLModel, table=True):
@@ -146,8 +143,8 @@ class DocumentChunk(SQLModel, table=True):
     chunk_index: int = Field(default=0)
     content: str = Field(default="", sa_column=Column(Text))
     token_estimate: int = Field(default=0)
-    start_line: Optional[int] = Field(default=None)
-    end_line: Optional[int] = Field(default=None)
+    start_line: int | None = Field(default=None)
+    end_line: int | None = Field(default=None)
     created_at: datetime = Field(default_factory=utcnow)
 
 
@@ -161,13 +158,13 @@ class DatasetRun(SQLModel, table=True):
     output_path: str = Field(default="")
     record_count: int = Field(default=0)
     accepted_terms: bool = Field(default=False)
-    terms_url: Optional[str] = Field(default=None)
-    license_summary: Optional[str] = Field(default=None, sa_column=Column(Text))
-    manifest_json: Optional[str] = Field(default=None, sa_column=Column(Text))
+    terms_url: str | None = Field(default=None)
+    license_summary: str | None = Field(default=None, sa_column=Column(Text))
+    manifest_json: str | None = Field(default=None, sa_column=Column(Text))
     status: str = Field(default="pending")
-    error: Optional[str] = Field(default=None, sa_column=Column(Text))
+    error: str | None = Field(default=None, sa_column=Column(Text))
     created_at: datetime = Field(default_factory=utcnow, index=True)
-    finished_at: Optional[datetime] = Field(default=None)
+    finished_at: datetime | None = Field(default=None)
 
 
 class TrainingRun(SQLModel, table=True):
@@ -179,19 +176,19 @@ class TrainingRun(SQLModel, table=True):
     base_model_id: str = Field(default="")
     dataset_path: str = Field(default="")
     config_path: str = Field(default="")
-    config_json: Optional[str] = Field(default=None, sa_column=Column(Text))
+    config_json: str | None = Field(default=None, sa_column=Column(Text))
     output_dir: str = Field(default="")
     status: str = Field(default="pending")  # pending|running|completed|failed|stopped
-    pid: Optional[int] = Field(default=None)
+    pid: int | None = Field(default=None)
     current_step: int = Field(default=0)
-    total_steps: Optional[int] = Field(default=None)
-    train_loss: Optional[float] = Field(default=None)
-    eval_loss: Optional[float] = Field(default=None)
-    error: Optional[str] = Field(default=None, sa_column=Column(Text))
-    log_path: Optional[str] = Field(default=None)
+    total_steps: int | None = Field(default=None)
+    train_loss: float | None = Field(default=None)
+    eval_loss: float | None = Field(default=None)
+    error: str | None = Field(default=None, sa_column=Column(Text))
+    log_path: str | None = Field(default=None)
     created_at: datetime = Field(default_factory=utcnow, index=True)
-    started_at: Optional[datetime] = Field(default=None)
-    finished_at: Optional[datetime] = Field(default=None)
+    started_at: datetime | None = Field(default=None)
+    finished_at: datetime | None = Field(default=None)
 
 
 class TrainingCheckpoint(SQLModel, table=True):
@@ -201,8 +198,8 @@ class TrainingCheckpoint(SQLModel, table=True):
     run_id: str = Field(foreign_key="training_runs.id", index=True)
     step: int = Field(default=0)
     path: str = Field(default="")
-    train_loss: Optional[float] = Field(default=None)
-    eval_loss: Optional[float] = Field(default=None)
+    train_loss: float | None = Field(default=None)
+    eval_loss: float | None = Field(default=None)
     created_at: datetime = Field(default_factory=utcnow)
 
 
@@ -215,7 +212,7 @@ class ApiKey(SQLModel, table=True):
     key_hash: str = Field(default="", index=True)
     scopes: str = Field(default="read,write")
     revoked: bool = Field(default=False)
-    last_used_at: Optional[datetime] = Field(default=None)
+    last_used_at: datetime | None = Field(default=None)
     created_at: datetime = Field(default_factory=utcnow)
 
 
@@ -224,8 +221,8 @@ class AuditLog(SQLModel, table=True):
 
     id: str = Field(default_factory=new_id, primary_key=True)
     action: str = Field(index=True)
-    target_type: Optional[str] = Field(default=None)
-    target_id: Optional[str] = Field(default=None)
+    target_type: str | None = Field(default=None)
+    target_id: str | None = Field(default=None)
     actor: str = Field(default="local")
-    detail_json: Optional[str] = Field(default=None, sa_column=Column(Text))
+    detail_json: str | None = Field(default=None, sa_column=Column(Text))
     created_at: datetime = Field(default_factory=utcnow, index=True)

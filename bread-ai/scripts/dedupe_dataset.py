@@ -36,7 +36,9 @@ def main(argv: list[str] | None = None) -> int:
         default=0.85,
         help="Sketch similarity above which two records count as duplicates.",
     )
-    parser.add_argument("--exact-only", action="store_true", help="Skip near-duplicate detection.")
+    parser.add_argument(
+        "--exact-only", action="store_true", help="Skip near-duplicate detection."
+    )
     args = parser.parse_args(argv)
 
     input_path = Path(args.input).expanduser()
@@ -44,12 +46,18 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error: no file at {input_path}")
         return 2
     output_path = (
-        Path(args.output).expanduser() if args.output else input_path.with_suffix(".dedup.jsonl")
+        Path(args.output).expanduser()
+        if args.output
+        else input_path.with_suffix(".dedup.jsonl")
     )
 
-    records = [record for _n, record, error in read_jsonl(input_path) if record and not error]
+    records = [
+        record for _n, record, error in read_jsonl(input_path) if record and not error
+    ]
     kept, stats = dedupe_records(
-        records, near_duplicates=not args.exact_only, similarity_threshold=args.threshold
+        records,
+        near_duplicates=not args.exact_only,
+        similarity_threshold=args.threshold,
     )
     written = write_jsonl(output_path, kept)
 

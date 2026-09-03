@@ -33,7 +33,7 @@ def list_configs() -> list[dict]:
     for path in sorted(config_dir.glob("*.yaml")):
         try:
             config = training_service.load_config(path)
-        except Exception:  # noqa: BLE001 - a broken config should not hide the rest
+        except Exception:
             config = {}
         entries.append(
             {
@@ -76,9 +76,7 @@ def stop_training(
     payload: TrainingStopRequest, session: Session = Depends(get_session)
 ) -> TrainingRunOut:
     run = training_service.stop_run(session, payload.run_id)
-    record_action(
-        session, "training.stop", target_type="training_run", target_id=run.id
-    )
+    record_action(session, "training.stop", target_type="training_run", target_id=run.id)
     return TrainingRunOut(**run.model_dump())
 
 

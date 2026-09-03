@@ -18,23 +18,21 @@ from __future__ import annotations
 
 import argparse
 import math
+import sys
 from pathlib import Path
 
 from _bootstrap import REPO_ROOT, print_header, print_table
 
-import sys
-
 sys.path.insert(0, str(REPO_ROOT / "backend"))
 
-from app.services.datasets.records import read_jsonl  # noqa: E402
+from app.services.datasets.records import read_jsonl
 
 SAMPLE_PROMPTS = [
     "Explain what this Python function does and name one edge case it misses:\n\n"
     "def average(values):\n    return sum(values) / len(values)\n",
-    "Write a Paper plugin command that teleports a player to spawn, with a "
-    "permission check.",
-    "This Rust code does not compile: `let s = String::from(\"hi\"); let t = s; "
-    "println!(\"{}\", s);` Explain why and give the fix.",
+    "Write a Paper plugin command that teleports a player to spawn, with a " "permission check.",
+    'This Rust code does not compile: `let s = String::from("hi"); let t = s; '
+    'println!("{}", s);` Explain why and give the fix.',
 ]
 
 

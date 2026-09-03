@@ -1,6 +1,12 @@
 """Pluggable local inference backends."""
 
-from .base import BackendStatus, ChatTurn, GenerationParams, InferenceBackend, StopSignal
+from .base import (
+    BackendStatus,
+    ChatTurn,
+    GenerationParams,
+    InferenceBackend,
+    StopSignal,
+)
 from .registry import BACKEND_NAMES, ModelRegistry, build_backend, registry
 
 __all__ = [

@@ -112,9 +112,7 @@ def init_db(settings: Settings | None = None) -> None:
         if not session.exec(select(LocalProfile)).first():
             session.add(LocalProfile(display_name="local", is_default=True))
 
-        existing_models = {
-            record.model_id for record in session.exec(select(ModelRecord)).all()
-        }
+        existing_models = {record.model_id for record in session.exec(select(ModelRecord)).all()}
         for entry in BUILTIN_MODELS:
             if entry["model_id"] in existing_models:
                 continue

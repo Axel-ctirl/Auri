@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import time
+from pathlib import Path
 
 MIT_LICENSE = """MIT License
 
@@ -38,7 +39,7 @@ def format_currency(amount_in_cents, currency_symbol="$"):
     return f"{currency_symbol}{amount_in_cents / 100:.2f}"
 '''
 
-LEAKY_MODULE = '''import requests
+LEAKY_MODULE = """import requests
 
 GITHUB_TOKEN = "ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
@@ -48,7 +49,7 @@ def fetch_issues(repository):
         f"https://api.github.com/repos/{repository}/issues",
         headers={"Authorization": f"token {GITHUB_TOKEN}"},
     ).json()
-'''
+"""
 
 
 def _make_repo(root, name, license_text, files):
@@ -93,7 +94,9 @@ def test_local_collection_keeps_permissive_code_and_skips_copyleft(client, tmp_p
     assert run["status"] == "completed", run["error"]
     assert run["record_count"] == 1
 
-    report = client.get("/api/datasets/report", params={"path": run["output_path"]}).json()
+    report = client.get(
+        "/api/datasets/report", params={"path": run["output_path"]}
+    ).json()
     assert report["total_records"] == 1
     assert report["license_counts"] == {"MIT": 1}
     assert report["language_counts"] == {"python": 1}
@@ -121,7 +124,7 @@ def test_files_containing_credentials_are_left_out(client, tmp_path):
     run = _wait_for_run(client, started["id"])
 
     assert run["record_count"] == 1
-    contents = open(run["output_path"], encoding="utf-8").read()
+    contents = Path(run["output_path"]).read_text(encoding="utf-8")
     assert "ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789" not in contents
 
 
@@ -174,8 +177,14 @@ def test_validation_reports_bad_records(client, bread_env):
                 json.dumps(
                     {
                         "messages": [
-                            {"role": "user", "content": "Explain closures in JavaScript."},
-                            {"role": "assistant", "content": "A closure captures scope."},
+                            {
+                                "role": "user",
+                                "content": "Explain closures in JavaScript.",
+                            },
+                            {
+                                "role": "assistant",
+                                "content": "A closure captures scope.",
+                            },
                         ]
                     }
                 ),

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import itertools
 from pathlib import Path
 
 import pytest
@@ -49,7 +50,7 @@ def test_overlap_repeats_context_between_neighbours():
     chunks = chunk_text(document, chunk_size=200, chunk_overlap=80, extension=".txt")
 
     assert len(chunks) > 1
-    for earlier, later in zip(chunks, chunks[1:]):
+    for earlier, later in itertools.pairwise(chunks):
         assert later.start_line <= earlier.end_line
 
 
@@ -165,7 +166,12 @@ def test_cleaning_drops_short_records_and_redacts_secrets():
 def test_dedupe_removes_exact_and_near_duplicates():
     base = "The retry helper waits with exponential backoff before trying the call again."
     kept, stats = dedupe_records(
-        [{"text": base}, {"text": base}, {"text": base + " Extra."}, {"text": "Unrelated text about compiling Rust crates."}]
+        [
+            {"text": base},
+            {"text": base},
+            {"text": base + " Extra."},
+            {"text": "Unrelated text about compiling Rust crates."},
+        ]
     )
     assert stats.exact_duplicates == 1
     assert stats.near_duplicates == 1

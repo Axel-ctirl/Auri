@@ -8,7 +8,7 @@ from sqlmodel import Session, col, select
 from ..audit import record_action
 from ..config import Settings, get_settings
 from ..db import get_session
-from ..errors import NotFoundError, PayloadTooLargeError, ValidationFailure
+from ..errors import NotFoundError, ValidationFailedError
 from ..models import Document, KnowledgeSpace
 from ..schemas import (
     Citation,
@@ -73,7 +73,7 @@ async def upload_documents(
         original_name = upload.filename or "upload.txt"
         try:
             extension = check_extension(original_name)
-        except ValidationFailure as exc:
+        except ValidationFailedError as exc:
             skipped.append({"filename": original_name, "reason": exc.message})
             continue
 
@@ -169,9 +169,7 @@ def index_documents(
     else:
         space = _default_space(session, payload.knowledge_space_id)
         documents = list(
-            session.exec(
-                select(Document).where(Document.knowledge_space_id == space.id)
-            ).all()
+            session.exec(select(Document).where(Document.knowledge_space_id == space.id)).all()
         )
 
     if not documents:
@@ -179,8 +177,11 @@ def index_documents(
 
     result = ingest.index_documents(session, settings, documents, force=payload.force)
     record_action(
-        session, "document.index", target_type="knowledge_space",
-        target_id=documents[0].knowledge_space_id, detail=result,
+        session,
+        "document.index",
+        target_type="knowledge_space",
+        target_id=documents[0].knowledge_space_id,
+        detail=result,
     )
     return DocumentIndexResponse(**result)
 
@@ -198,7 +199,9 @@ def list_documents(
 
 
 @router.delete(
-    "/documents/{document_id}", response_model=DeleteResponse, summary="Delete a document"
+    "/documents/{document_id}",
+    response_model=DeleteResponse,
+    summary="Delete a document",
 )
 def delete_document(
     document_id: str,

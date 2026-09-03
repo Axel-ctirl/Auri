@@ -26,17 +26,16 @@ def list_keys(session: Session = Depends(get_session)) -> list[ApiKeyOut]:
 
 
 @router.post("", response_model=ApiKeyCreated, summary="Create an API key")
-def create_key(
-    payload: ApiKeyCreate, session: Session = Depends(get_session)
-) -> ApiKeyCreated:
+def create_key(payload: ApiKeyCreate, session: Session = Depends(get_session)) -> ApiKeyCreated:
     issued = generate_api_key(session, payload.label, payload.scopes)
     record_action(
-        session, "api_key.create", target_type="api_key", target_id=issued.record.id,
+        session,
+        "api_key.create",
+        target_type="api_key",
+        target_id=issued.record.id,
         detail={"label": issued.record.label},
     )
-    return ApiKeyCreated(
-        **issued.record.model_dump(exclude={"key_hash"}), key=issued.plaintext
-    )
+    return ApiKeyCreated(**issued.record.model_dump(exclude={"key_hash"}), key=issued.plaintext)
 
 
 @router.delete("/{key_id}", response_model=DeleteResponse, summary="Revoke an API key")

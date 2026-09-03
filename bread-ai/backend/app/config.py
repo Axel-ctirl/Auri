@@ -41,9 +41,7 @@ def _yaml_overlay() -> dict[str, Any]:
     if not config_path.is_absolute():
         config_path = REPO_ROOT / config_path
     if not config_path.exists():
-        raise FileNotFoundError(
-            f"BREAD_CONFIG_FILE points at {config_path}, which does not exist."
-        )
+        raise FileNotFoundError(f"BREAD_CONFIG_FILE points at {config_path}, which does not exist.")
 
     with config_path.open("r", encoding="utf-8") as handle:
         loaded = yaml.safe_load(handle) or {}
@@ -106,9 +104,7 @@ class Settings(BaseSettings):
     top_p: float = Field(default=0.95, alias="TOP_P")
     repetition_penalty: float = Field(default=1.05, alias="REPETITION_PENALTY")
     adapter_path: str = Field(default="", alias="ADAPTER_PATH")
-    system_prompt_path: str = Field(
-        default="prompts/system_default.md", alias="SYSTEM_PROMPT_PATH"
-    )
+    system_prompt_path: str = Field(default="prompts/system_default.md", alias="SYSTEM_PROMPT_PATH")
     trust_remote_code: bool = Field(default=False, alias="TRUST_REMOTE_CODE")
     mock_delay_seconds: float = Field(default=0.01, alias="MOCK_DELAY_SECONDS")
     allow_model_download: bool = Field(default=False, alias="ALLOW_MODEL_DOWNLOAD")

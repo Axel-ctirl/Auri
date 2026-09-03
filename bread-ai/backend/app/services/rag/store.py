@@ -8,6 +8,7 @@ listener, which suits a personal index of a few hundred thousand chunks. Set
 
 from __future__ import annotations
 
+import contextlib
 import json
 import threading
 from abc import ABC, abstractmethod
@@ -145,7 +146,7 @@ class NumpyVectorStore(VectorStore):
                 return 0
             self._save(
                 space_id,
-                vectors[keep] if keep else np.zeros((0, vectors.shape[1]), dtype=np.float32),
+                (vectors[keep] if keep else np.zeros((0, vectors.shape[1]), dtype=np.float32)),
                 [meta[i] for i in keep],
             )
             return removed
@@ -229,10 +230,9 @@ class ChromaVectorStore(VectorStore):
         return len(ids)
 
     def delete_space(self, space_id: str) -> None:
-        try:
+        # Deleting a collection that was never created is not an error here.
+        with contextlib.suppress(Exception):  # pragma: no cover
             self._client.delete_collection(name=f"space_{space_id}")
-        except Exception:  # pragma: no cover - collection may not exist
-            pass
 
     def count(self, space_id: str) -> int:
         return int(self._collection(space_id).count())

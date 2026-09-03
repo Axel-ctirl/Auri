@@ -26,8 +26,16 @@ DEFAULT_ALLOWED_LICENSES = (
 )
 
 LICENSE_FILENAMES = (
-    "LICENSE", "LICENSE.txt", "LICENSE.md", "LICENCE", "LICENCE.txt", "LICENCE.md",
-    "COPYING", "COPYING.txt", "UNLICENSE", "UNLICENSE.txt",
+    "LICENSE",
+    "LICENSE.txt",
+    "LICENSE.md",
+    "LICENCE",
+    "LICENCE.txt",
+    "LICENCE.md",
+    "COPYING",
+    "COPYING.txt",
+    "UNLICENSE",
+    "UNLICENSE.txt",
 )
 
 # Ordered: the first matching signature wins, so more specific texts come first.
@@ -35,9 +43,15 @@ _SIGNATURES: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("Apache-2.0", ("apache license", "version 2.0")),
     ("MIT", ("permission is hereby granted, free of charge",)),
     ("BSD-3-Clause", ("neither the name of", "redistributions of source code")),
-    ("BSD-2-Clause", ("redistributions of source code", "redistributions in binary form")),
+    (
+        "BSD-2-Clause",
+        ("redistributions of source code", "redistributions in binary form"),
+    ),
     ("ISC", ("permission to use, copy, modify, and/or distribute this software",)),
-    ("Unlicense", ("this is free and unencumbered software released into the public domain",)),
+    (
+        "Unlicense",
+        ("this is free and unencumbered software released into the public domain",),
+    ),
     ("CC0-1.0", ("creative commons legal code", "cc0 1.0 universal")),
     ("MPL-2.0", ("mozilla public license version 2.0",)),
     ("GPL-3.0", ("gnu general public license", "version 3")),
@@ -98,7 +112,9 @@ def detect_repository_license(root: Path) -> LicenseFinding:
             data = json.loads(package_json.read_text(encoding="utf-8", errors="ignore"))
             declared = data.get("license")
             if isinstance(declared, str) and declared.strip():
-                return LicenseFinding(_normalize(declared), "package.json", str(package_json))
+                return LicenseFinding(
+                    _normalize(declared), "package.json", str(package_json)
+                )
         except (OSError, ValueError):
             pass
 
@@ -110,11 +126,17 @@ def detect_repository_license(root: Path) -> LicenseFinding:
             text = metadata.read_text(encoding="utf-8", errors="ignore")
         except OSError:
             continue
-        match = re.search(r'license\s*=\s*[\{"\']?\s*(?:text\s*=\s*")?([A-Za-z0-9.\-+ ]+)', text)
+        match = re.search(
+            r'license\s*=\s*[\{"\']?\s*(?:text\s*=\s*")?([A-Za-z0-9.\-+ ]+)', text
+        )
         if match:
-            return LicenseFinding(_normalize(match.group(1)), metadata_name, str(metadata))
+            return LicenseFinding(
+                _normalize(match.group(1)), metadata_name, str(metadata)
+            )
 
-    return LicenseFinding("UNKNOWN", "no license file found at the repository root", str(root))
+    return LicenseFinding(
+        "UNKNOWN", "no license file found at the repository root", str(root)
+    )
 
 
 def _normalize(raw: str) -> str:
@@ -138,7 +160,9 @@ def _normalize(raw: str) -> str:
     return aliases.get(cleaned.lower(), cleaned)
 
 
-def is_allowed(license_id: str, allowed: tuple[str, ...] | list[str] | None = None) -> bool:
+def is_allowed(
+    license_id: str, allowed: tuple[str, ...] | list[str] | None = None
+) -> bool:
     allowlist = {item.lower() for item in (allowed or DEFAULT_ALLOWED_LICENSES)}
     return license_id.lower() in allowlist
 
@@ -151,10 +175,14 @@ def redistribution_warning(license_counts: dict[str, int]) -> list[str]:
             "redistribute them and do not assume they are safe to train on."
         )
     copyleft = {
-        name: count for name, count in license_counts.items() if name in COPYLEFT_LICENSES
+        name: count
+        for name, count in license_counts.items()
+        if name in COPYLEFT_LICENSES
     }
     if copyleft:
-        listed = ", ".join(f"{name} ({count})" for name, count in sorted(copyleft.items()))
+        listed = ", ".join(
+            f"{name} ({count})" for name, count in sorted(copyleft.items())
+        )
         warnings.append(
             f"Copyleft-licensed records are present: {listed}. Releasing weights or "
             "data derived from them may carry obligations. Check with the licenses "

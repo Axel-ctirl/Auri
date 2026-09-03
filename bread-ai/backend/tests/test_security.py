@@ -37,9 +37,7 @@ def test_revoked_key_is_rejected(bread_env, monkeypatch):
 
     monkeypatch.setattr(bread_env, "require_api_key", True)
     with TestClient(create_app()) as guarded:
-        response = guarded.get(
-            "/api/conversations", headers={"X-API-Key": created["key"]}
-        )
+        response = guarded.get("/api/conversations", headers={"X-API-Key": created["key"]})
         assert response.status_code == 401
         assert response.json()["error"]["code"] == "unauthorized"
 
@@ -56,12 +54,17 @@ def test_enforced_mode_requires_a_key_but_leaves_health_open(bread_env, monkeypa
     with TestClient(create_app()) as guarded:
         assert guarded.get("/api/health").status_code == 200
         assert guarded.get("/api/conversations").status_code == 401
-        assert guarded.get(
-            "/api/conversations", headers={"X-API-Key": created["key"]}
-        ).status_code == 200
-        assert guarded.get(
-            "/api/conversations", headers={"Authorization": f"Bearer {created['key']}"}
-        ).status_code == 200
+        assert (
+            guarded.get("/api/conversations", headers={"X-API-Key": created["key"]}).status_code
+            == 200
+        )
+        assert (
+            guarded.get(
+                "/api/conversations",
+                headers={"Authorization": f"Bearer {created['key']}"},
+            ).status_code
+            == 200
+        )
 
 
 def test_rate_limiter_blocks_a_burst(bread_env, monkeypatch):
@@ -91,7 +94,12 @@ def test_lan_binding_produces_warnings_and_forces_key_checks(bread_env, monkeypa
 
 @pytest.mark.parametrize(
     "host,expected",
-    [("127.0.0.1", False), ("localhost", False), ("::1", False), ("192.168.1.20", True)],
+    [
+        ("127.0.0.1", False),
+        ("localhost", False),
+        ("::1", False),
+        ("192.168.1.20", True),
+    ],
 )
 def test_lan_detection(bread_env, monkeypatch, host, expected):
     monkeypatch.setattr(bread_env, "host", host)

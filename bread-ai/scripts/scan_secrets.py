@@ -22,9 +22,34 @@ from app.services.datasets.records import read_jsonl, record_text
 from app.services.datasets.secrets import scan_text
 
 TEXT_SUFFIXES = {
-    ".py", ".java", ".js", ".jsx", ".ts", ".tsx", ".go", ".rs", ".c", ".h",
-    ".cpp", ".hpp", ".cs", ".php", ".rb", ".sql", ".sh", ".lua", ".luau",
-    ".yaml", ".yml", ".json", ".md", ".txt", ".env", ".ini", ".toml", ".cfg",
+    ".py",
+    ".java",
+    ".js",
+    ".jsx",
+    ".ts",
+    ".tsx",
+    ".go",
+    ".rs",
+    ".c",
+    ".h",
+    ".cpp",
+    ".hpp",
+    ".cs",
+    ".php",
+    ".rb",
+    ".sql",
+    ".sh",
+    ".lua",
+    ".luau",
+    ".yaml",
+    ".yml",
+    ".json",
+    ".md",
+    ".txt",
+    ".env",
+    ".ini",
+    ".toml",
+    ".cfg",
 }
 
 

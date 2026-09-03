@@ -4,16 +4,15 @@ from __future__ import annotations
 
 
 def test_create_list_rename_and_delete(client):
-    created = client.post(
-        "/api/conversations", json={"title": "Paper plugin work"}
-    ).json()
+    created = client.post("/api/conversations", json={"title": "Paper plugin work"}).json()
     assert created["title"] == "Paper plugin work"
 
     listed = client.get("/api/conversations").json()
     assert any(item["id"] == created["id"] for item in listed)
 
     renamed = client.patch(
-        f"/api/conversations/{created['id']}", json={"title": "Fabric mod work", "pinned": True}
+        f"/api/conversations/{created['id']}",
+        json={"title": "Fabric mod work", "pinned": True},
     ).json()
     assert renamed["title"] == "Fabric mod work"
     assert renamed["pinned"] is True
@@ -36,9 +35,7 @@ def test_archived_conversations_are_hidden_by_default(client):
     client.patch(f"/api/conversations/{created['id']}", json={"archived": True})
 
     assert all(item["id"] != created["id"] for item in client.get("/api/conversations").json())
-    with_archived = client.get(
-        "/api/conversations", params={"include_archived": True}
-    ).json()
+    with_archived = client.get("/api/conversations", params={"include_archived": True}).json()
     assert any(item["id"] == created["id"] for item in with_archived)
 
 

@@ -9,17 +9,56 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 CODE_EXTENSIONS = {
-    ".py", ".java", ".js", ".jsx", ".ts", ".tsx", ".lua", ".luau", ".go", ".rs",
-    ".c", ".h", ".cpp", ".hpp", ".cs", ".php", ".rb", ".sql", ".sh", ".html",
-    ".css", ".yaml", ".yml", ".json",
+    ".py",
+    ".java",
+    ".js",
+    ".jsx",
+    ".ts",
+    ".tsx",
+    ".lua",
+    ".luau",
+    ".go",
+    ".rs",
+    ".c",
+    ".h",
+    ".cpp",
+    ".hpp",
+    ".cs",
+    ".php",
+    ".rb",
+    ".sql",
+    ".sh",
+    ".html",
+    ".css",
+    ".yaml",
+    ".yml",
+    ".json",
 }
 
 # Lines that usually start a new logical unit. Splitting just before one of
 # these keeps a function's signature attached to its body.
 BOUNDARY_PREFIXES = (
-    "def ", "class ", "async def ", "func ", "fn ", "public ", "private ",
-    "protected ", "export ", "function ", "local function ", "impl ", "type ",
-    "interface ", "struct ", "enum ", "package ", "module ", "#", "##", "###",
+    "def ",
+    "class ",
+    "async def ",
+    "func ",
+    "fn ",
+    "public ",
+    "private ",
+    "protected ",
+    "export ",
+    "function ",
+    "local function ",
+    "impl ",
+    "type ",
+    "interface ",
+    "struct ",
+    "enum ",
+    "package ",
+    "module ",
+    "#",
+    "##",
+    "###",
 )
 
 
@@ -89,7 +128,9 @@ def chunk_text(
         if end_index >= len(lines):
             break
 
-        start_index = max(start_index + 1, end_index - _overlap_lines(lines, end_index, chunk_overlap))
+        start_index = max(
+            start_index + 1, end_index - _overlap_lines(lines, end_index, chunk_overlap)
+        )
 
     return chunks
 

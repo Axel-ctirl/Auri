@@ -34,7 +34,6 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-
 from _bootstrap import REPO_ROOT, print_header, print_table
 
 
@@ -104,9 +103,7 @@ def main(argv: list[str] | None = None) -> int:
         import torch.nn as nn
         from torch.nn import functional as F
     except ImportError:
-        raise SystemExit(
-            "error: PyTorch is not installed. See docs/WINDOWS_SETUP.md."
-        ) from None
+        raise SystemExit("error: PyTorch is not installed. See docs/WINDOWS_SETUP.md.") from None
 
     torch.manual_seed(int(config.get("seed", 20260903)))
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -220,9 +217,7 @@ def main(argv: list[str] | None = None) -> int:
 
             if targets is None:
                 return logits, None
-            loss = F.cross_entropy(
-                logits.view(-1, logits.size(-1)), targets.reshape(-1)
-            )
+            loss = F.cross_entropy(logits.view(-1, logits.size(-1)), targets.reshape(-1))
             return logits, loss
 
         @torch.no_grad()
@@ -319,7 +314,9 @@ def main(argv: list[str] | None = None) -> int:
 
     prompt = str(config.get("sample_prompt", "The"))
     context = torch.tensor(
-        [[stoi.get(character, 0) for character in prompt]], dtype=torch.long, device=device
+        [[stoi.get(character, 0) for character in prompt]],
+        dtype=torch.long,
+        device=device,
     )
     sample = model.generate(context, int(config.get("sample_tokens", 200)))[0].tolist()
 
