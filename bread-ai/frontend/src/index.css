@@ -1,0 +1,143 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Bread ships dark by default. The light palette exists because some people
+ * work in bright rooms, and a tool that only works in one lighting condition is
+ * an incomplete tool.
+ */
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  html.light {
+    color-scheme: light;
+  }
+
+  body {
+    @apply bg-ink-950 text-ink-100 antialiased;
+  }
+
+  html.light body {
+    @apply bg-ink-50 text-ink-900;
+  }
+
+  ::selection {
+    @apply bg-crust-500/40;
+  }
+
+  /* Scrollbars that do not fight the dark ground. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: theme("colors.ink.700") transparent;
+  }
+
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    @apply rounded-full bg-ink-700;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  :focus-visible {
+    @apply outline-none ring-2 ring-crust-400 ring-offset-2 ring-offset-ink-950;
+  }
+}
+
+@layer components {
+  .panel {
+    @apply rounded-xl border border-ink-800 bg-ink-900/70 shadow-sm;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2
+      text-sm font-medium transition-colors disabled:cursor-not-allowed
+      disabled:opacity-50;
+  }
+
+  .btn-primary {
+    @apply btn bg-crust-500 text-ink-950 hover:bg-crust-400;
+  }
+
+  .btn-ghost {
+    @apply btn border border-ink-800 bg-transparent text-ink-200 hover:bg-ink-800;
+  }
+
+  .btn-danger {
+    @apply btn border border-red-900/60 bg-transparent text-red-300 hover:bg-red-950/40;
+  }
+
+  .field {
+    @apply w-full rounded-lg border border-ink-800 bg-ink-950 px-3 py-2 text-sm
+      text-ink-100 placeholder:text-ink-500 focus:border-crust-500;
+  }
+
+  .label {
+    @apply mb-1 block text-xs font-medium uppercase tracking-wide text-ink-400;
+  }
+
+  .badge {
+    @apply inline-flex items-center gap-1 rounded-full border border-ink-700
+      px-2 py-0.5 text-xs text-ink-300;
+  }
+}
+
+/*
+ * Syntax highlighting. A compact theme defined here rather than pulled from a
+ * CDN, because Bread must work with the network unplugged.
+ */
+.hljs {
+  @apply text-ink-100;
+}
+.hljs-comment,
+.hljs-quote {
+  @apply italic text-ink-400;
+}
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-literal,
+.hljs-type {
+  @apply text-crust-300;
+}
+.hljs-string,
+.hljs-regexp,
+.hljs-addition {
+  @apply text-emerald-300;
+}
+.hljs-number,
+.hljs-symbol,
+.hljs-bullet {
+  @apply text-sky-300;
+}
+.hljs-title,
+.hljs-section,
+.hljs-name {
+  @apply text-amber-200;
+}
+.hljs-attr,
+.hljs-attribute,
+.hljs-variable,
+.hljs-template-variable {
+  @apply text-violet-300;
+}
+.hljs-built_in,
+.hljs-class .hljs-title {
+  @apply text-teal-200;
+}
+.hljs-deletion {
+  @apply text-red-300;
+}
+.hljs-emphasis {
+  @apply italic;
+}
+.hljs-strong {
+  @apply font-semibold;
+}
