@@ -1,0 +1,24 @@
+# Bread model profile: the mock backend.
+#
+# Downloads nothing, loads nothing and answers from a fixed template. Use it to
+# develop the frontend, run the test suite, or check that the API works before
+# committing to a multi-gigabyte download.
+#
+#   BREAD_CONFIG_FILE=configs/model.mock.yaml uvicorn app.main:app
+#
+# Retrieval still works: EMBEDDING_BACKEND=hashing uses Bread's dependency-light
+# fallback encoder, so search functions with no model cache at all.
+
+model:
+  MODEL_BACKEND: mock
+  MODEL_ID: bread/mock
+  MAX_CONTEXT_LENGTH: 8192
+  MAX_NEW_TOKENS: 512
+  TEMPERATURE: 0.2
+  TOP_P: 0.95
+  MOCK_DELAY_SECONDS: 0.01
+
+rag:
+  EMBEDDING_BACKEND: hashing
+  RAG_ENABLED: true
+  RAG_TOP_K: 5

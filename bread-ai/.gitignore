@@ -1,0 +1,41 @@
+# Python
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Node
+node_modules/
+frontend/dist/
+frontend/.vite/
+*.tsbuildinfo
+
+# Local configuration and data. Everything Bread stores stays on your machine
+# and none of it belongs in git.
+.env
+.env.local
+data/
+!data/.gitkeep
+*.db
+*.db-wal
+*.db-shm
+
+# Models, adapters and datasets
+*.gguf
+*.safetensors
+*.bin
+*.pt
+*.ckpt
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

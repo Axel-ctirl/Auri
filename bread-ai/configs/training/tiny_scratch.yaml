@@ -1,0 +1,45 @@
+# A tiny character-level transformer trained from scratch. THIS IS A TOY.
+#
+# Read this before you run it
+# ---------------------------
+# This trains a few-million-parameter model on a few megabytes of your own plain
+# English. It exists to make the mechanics of pre-training concrete: tokenizing,
+# batching, the loss curve going down, sampling from a model that started as
+# noise.
+#
+# It will NOT produce a useful assistant. It will not write working code. It is
+# not a smaller Claude, or a smaller anything: the gap between this and a
+# frontier model is roughly six orders of magnitude in compute and data, and no
+# amount of tuning on one GPU closes it. For a model that actually helps you,
+# fine-tune an open-weight model with configs/training/qlora_7b.yaml instead.
+
+description: "Toy: a tiny char-level transformer from scratch. Educational only."
+method: tiny_scratch
+min_vram_gb: 4
+
+dataset_path: data/datasets/english_corpus.jsonl
+output_dir: data/runs/tiny-scratch
+base_model_id: scratch/tiny-char-transformer
+
+# ----------------------------------------------------------------- model shape
+vocab_source: characters
+block_size: 256
+n_layer: 6
+n_head: 6
+n_embd: 384
+dropout: 0.2
+
+# -------------------------------------------------------------------- schedule
+batch_size: 32
+max_steps: 3000
+learning_rate: 0.0003
+min_learning_rate: 0.00003
+warmup_steps: 100
+weight_decay: 0.1
+grad_clip: 1.0
+eval_interval: 250
+eval_iters: 50
+seed: 20260903
+compile_model: false
+sample_prompt: "The function"
+sample_tokens: 200

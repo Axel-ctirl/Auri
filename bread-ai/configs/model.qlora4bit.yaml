@@ -1,0 +1,32 @@
+# Bread model profile: 4-bit NF4 quantization, ready for QLoRA.
+#
+# This is the recommended default on a 32 GB RTX 5090. A 7B model quantized to
+# 4-bit uses roughly 5 GB, which leaves plenty of headroom for a long context
+# and for a training run in another process.
+#
+#   BREAD_CONFIG_FILE=configs/model.qlora4bit.yaml uvicorn app.main:app
+#
+# Needs bitsandbytes. On Windows, install a build that matches your CUDA
+# version; see docs/WINDOWS_SETUP.md.
+
+model:
+  MODEL_ID: Qwen/Qwen2.5-Coder-7B-Instruct
+  MODEL_BACKEND: transformers
+  MODEL_DEVICE: auto
+  MODEL_DTYPE: bfloat16        # compute dtype for the 4-bit kernels
+  QUANTIZATION_MODE: 4bit
+  MAX_CONTEXT_LENGTH: 8192
+  MAX_NEW_TOKENS: 1536
+  TEMPERATURE: 0.2
+  TOP_P: 0.95
+  REPETITION_PENALTY: 1.05
+  # Point this at a directory a training run produced, the one with
+  # adapter_config.json in it.
+  ADAPTER_PATH: ""
+  SYSTEM_PROMPT_PATH: prompts/system_default.md
+  ALLOW_MODEL_DOWNLOAD: false
+
+rag:
+  EMBEDDING_MODEL_ID: sentence-transformers/all-MiniLM-L6-v2
+  RAG_ENABLED: true
+  RAG_TOP_K: 6

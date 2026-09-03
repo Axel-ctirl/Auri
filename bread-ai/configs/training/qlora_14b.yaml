@@ -1,0 +1,60 @@
+# QLoRA fine-tune of a 14B coding model. Still fits 32 GB at 4-bit, but the
+# margins are thinner: keep the sequence length modest and expect roughly twice
+# the wall-clock time of the 7B config.
+#
+# If you hit CUDA out-of-memory, in this order: lower max_seq_length to 1024,
+# set gradient_checkpointing true (already on), reduce lora_r to 16, then trim
+# lora_target_modules to the attention projections only.
+
+description: QLoRA on a 14B coding model. Tighter memory margins, better answers.
+method: qlora
+min_vram_gb: 24
+
+base_model_id: Qwen/Qwen2.5-Coder-14B-Instruct
+tokenizer_id: ""
+dataset_path: data/datasets/bread_sft.jsonl
+dataset_schema: sft_chat
+eval_split_ratio: 0.02
+output_dir: data/runs/qlora-14b
+
+load_in_4bit: true
+bnb_4bit_quant_type: nf4
+bnb_4bit_use_double_quant: true
+bnb_4bit_compute_dtype: bfloat16
+
+lora_r: 16
+lora_alpha: 32
+lora_dropout: 0.05
+lora_bias: none
+lora_target_modules:
+  - q_proj
+  - k_proj
+  - v_proj
+  - o_proj
+  - gate_proj
+  - up_proj
+  - down_proj
+
+num_train_epochs: 1
+max_steps: -1
+per_device_train_batch_size: 1
+gradient_accumulation_steps: 32
+learning_rate: 0.00015
+lr_scheduler_type: cosine
+warmup_ratio: 0.03
+weight_decay: 0.0
+max_grad_norm: 0.3
+optim: paged_adamw_8bit
+max_seq_length: 1536
+packing: false
+
+bf16: true
+fp16: false
+gradient_checkpointing: true
+group_by_length: true
+logging_steps: 5
+save_steps: 250
+save_total_limit: 2
+eval_steps: 250
+seed: 20260903
+report_to: none

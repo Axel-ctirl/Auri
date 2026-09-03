@@ -1,0 +1,31 @@
+# Bread model profile: plain Hugging Face Transformers, no quantization.
+#
+# Use it when you have VRAM to spare and want the highest-quality output for the
+# model size. A 7B model in bfloat16 needs roughly 15 GB of weights plus KV
+# cache, which fits an RTX 5090 comfortably.
+#
+#   BREAD_CONFIG_FILE=configs/model.transformers.yaml uvicorn app.main:app
+#
+# Environment variables always win over this file.
+
+model:
+  MODEL_ID: Qwen/Qwen2.5-Coder-7B-Instruct
+  TOKENIZER_ID: ""            # empty means "same as MODEL_ID"
+  MODEL_BACKEND: transformers
+  MODEL_DEVICE: auto
+  MODEL_DTYPE: bfloat16
+  QUANTIZATION_MODE: none
+  MAX_CONTEXT_LENGTH: 8192
+  MAX_NEW_TOKENS: 1024
+  TEMPERATURE: 0.2
+  TOP_P: 0.95
+  REPETITION_PENALTY: 1.05
+  ADAPTER_PATH: ""
+  SYSTEM_PROMPT_PATH: prompts/system_default.md
+  TRUST_REMOTE_CODE: false
+  ALLOW_MODEL_DOWNLOAD: false  # flip to true, or confirm per load request
+
+rag:
+  EMBEDDING_MODEL_ID: sentence-transformers/all-MiniLM-L6-v2
+  RAG_ENABLED: true
+  RAG_TOP_K: 5

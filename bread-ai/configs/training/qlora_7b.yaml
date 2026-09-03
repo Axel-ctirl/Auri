@@ -1,0 +1,72 @@
+# QLoRA fine-tune of a 7B coding model. This is the recommended starting point
+# on an RTX 5090 (32 GB).
+#
+# What this does and does not do
+# ------------------------------
+# It adapts an existing open-weight model to your style, your codebase and your
+# task mix. It does not train a model from scratch, and no single consumer GPU
+# can do that: frontier models are trained on thousands of accelerators for
+# weeks. See docs/LIMITATIONS.md.
+#
+# Rough numbers on a 5090 with this config: about 9-13 GB of VRAM in use, and
+# roughly 25-45 minutes per epoch over 5,000 short examples. Sequence length is
+# the setting that moves memory the most.
+
+description: QLoRA on a 7B coding model. Safe defaults for a 32 GB GPU.
+method: qlora
+min_vram_gb: 16
+
+base_model_id: Qwen/Qwen2.5-Coder-7B-Instruct
+tokenizer_id: ""
+dataset_path: data/datasets/bread_sft.jsonl
+dataset_schema: sft_chat
+eval_split_ratio: 0.02
+output_dir: data/runs/qlora-7b
+
+# ----------------------------------------------------------------- quantization
+load_in_4bit: true
+bnb_4bit_quant_type: nf4
+bnb_4bit_use_double_quant: true
+bnb_4bit_compute_dtype: bfloat16
+
+# ------------------------------------------------------------------------ LoRA
+lora_r: 32
+lora_alpha: 64
+lora_dropout: 0.05
+lora_bias: none
+# Targeting every projection is what makes a LoRA behave close to a full
+# fine-tune. Drop down to ["q_proj", "v_proj"] if you are tight on memory.
+lora_target_modules:
+  - q_proj
+  - k_proj
+  - v_proj
+  - o_proj
+  - gate_proj
+  - up_proj
+  - down_proj
+
+# -------------------------------------------------------------------- schedule
+num_train_epochs: 2
+max_steps: -1
+per_device_train_batch_size: 1
+gradient_accumulation_steps: 16      # effective batch size 16
+learning_rate: 0.0002
+lr_scheduler_type: cosine
+warmup_ratio: 0.03
+weight_decay: 0.0
+max_grad_norm: 0.3
+optim: paged_adamw_8bit
+max_seq_length: 2048
+packing: false
+
+# ------------------------------------------------------------------- execution
+bf16: true
+fp16: false
+gradient_checkpointing: true
+group_by_length: true
+logging_steps: 5
+save_steps: 200
+save_total_limit: 3
+eval_steps: 200
+seed: 20260903
+report_to: none                       # never phones home

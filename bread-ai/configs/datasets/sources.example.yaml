@@ -1,0 +1,68 @@
+# Example dataset collection plan.
+#
+# Copy this to configs/datasets/sources.yaml and edit the paths. Nothing here
+# runs on its own; scripts/collect_code.py reads it when you pass --plan.
+#
+# The local sources are the ones to start with. They are yours, their licenses
+# are knowable, and the resulting model learns your actual conventions.
+
+output_dir: data/datasets
+
+local:
+  # Folders you own or have permission to use. Each project's own LICENSE file
+  # decides whether its files are collected.
+  - name: my_projects
+    source: local_code
+    paths:
+      - "C:/dev/minecraft-plugins"
+      - "C:/dev/discord-bots"
+      - "~/projects"
+    languages: [python, java, typescript, lua, luau, go, rust]
+    max_records: 5000
+    max_file_bytes: 262144
+    require_license: true
+
+  - name: my_notes
+    source: local_english
+    paths:
+      - "~/Documents/notes"
+    max_records: 2000
+
+# Every entry below downloads from an external host and therefore needs
+# --accept-terms on the command line. Read the terms first; a dataset-level
+# license label does not make every record inside it safe for your use.
+external:
+  - name: codesearchnet_python
+    source: codesearchnet
+    hf_dataset: code-search-net/code_search_net
+    hf_config: python
+    split: train
+    max_records: 3000
+    terms_url: https://huggingface.co/datasets/code-search-net/code_search_net
+    enabled: false
+
+  - name: stack_smol_sample
+    source: the_stack
+    hf_dataset: bigcode/the-stack-smol
+    hf_config: data/python
+    split: train
+    max_records: 2000
+    terms_url: https://huggingface.co/datasets/bigcode/the-stack#terms-of-use
+    enabled: false
+
+  - name: fineweb_edu_sample
+    source: fineweb_edu
+    hf_dataset: HuggingFaceFW/fineweb-edu
+    hf_config: sample-10BT
+    split: train
+    max_records: 2000
+    terms_url: https://huggingface.co/datasets/HuggingFaceFW/fineweb-edu
+    enabled: false
+
+  - name: openwebtext_sample
+    source: openwebtext
+    hf_dataset: Skylion007/openwebtext
+    split: train
+    max_records: 1000
+    terms_url: https://huggingface.co/datasets/Skylion007/openwebtext
+    enabled: false

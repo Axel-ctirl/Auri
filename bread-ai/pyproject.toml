@@ -1,0 +1,52 @@
+[project]
+name = "bread-ai"
+version = "0.1.0"
+description = "Bread: a local-first AI coding assistant with RAG and LoRA/QLoRA fine-tuning."
+requires-python = ">=3.11"
+license = { text = "MIT" }
+readme = "README.md"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = ["frontend", "data"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "C4", "SIM", "RUF"]
+ignore = [
+    "E501",   # line length is handled by the formatter
+    "B008",   # FastAPI's Depends() in defaults is the documented pattern
+    "N805",   # pydantic validators take cls, not self
+    "RUF012", # ClassVar annotations on mutable defaults add noise here
+]
+
+[tool.ruff.lint.per-file-ignores]
+"backend/tests/*" = ["S101"]
+"scripts/*" = ["T201"]  # scripts print on purpose
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+extend-exclude = "(frontend|data)"
+
+[tool.mypy]
+python_version = "3.11"
+warn_unused_configs = true
+ignore_missing_imports = true
+follow_imports = "silent"
+files = ["backend/app"]
+# The optional ML stack is not installed in CI, so its call sites cannot be
+# checked there. Everything else is.
+disable_error_code = ["import-untyped"]
+
+[tool.pytest.ini_options]
+testpaths = ["backend/tests"]
+pythonpath = ["backend"]
+addopts = "-q"
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::UserWarning",
+]

@@ -1,0 +1,48 @@
+# License policy for dataset collection.
+#
+# This is a working policy, not legal advice. Detection is heuristic: it reads
+# LICENSE files, SPDX headers and package metadata. Anything it cannot place is
+# recorded as UNKNOWN and excluded unless you pass --allow-license UNKNOWN,
+# which you should not do for anything you intend to publish.
+
+allowed:
+  - MIT
+  - Apache-2.0
+  - BSD-2-Clause
+  - BSD-3-Clause
+  - ISC
+  - Unlicense
+  - CC0-1.0
+
+# Recognised but excluded by default. Training on copyleft code and then
+# publishing the weights or the dataset raises obligations that are still
+# unsettled in practice. Include them only deliberately, with
+# --allow-license GPL-3.0 and so on.
+excluded_by_default:
+  - MPL-2.0
+  - GPL-2.0
+  - GPL-3.0
+  - LGPL-3.0
+  - AGPL-3.0
+  - UNKNOWN
+
+obligations:
+  MIT: Preserve the copyright notice and license text when redistributing.
+  Apache-2.0: >
+    Preserve copyright, license, NOTICE files and a statement of changes when
+    redistributing. Carries an explicit patent grant.
+  BSD-2-Clause: Preserve the copyright notice and disclaimer.
+  BSD-3-Clause: >
+    Preserve the notice and disclaimer, and do not use contributor names to
+    endorse derived work.
+  ISC: Preserve the copyright notice.
+  Unlicense: Public-domain dedication. No obligations.
+  CC0-1.0: Public-domain dedication. No obligations.
+
+reminders:
+  - Redistribution, commercial use and publishing fine-tuned weights are three
+    separate questions. A license that permits one may constrain another.
+  - Attribution metadata is kept on every record in the meta field. Do not strip
+    it when you convert a dataset to another format.
+  - Some upstream datasets have opt-out processes. Re-check them before you
+    publish anything derived from a snapshot you collected earlier.

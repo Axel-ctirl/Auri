@@ -1,0 +1,268 @@
+"""Unit tests for the pieces that do not need an HTTP client."""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+import pytest
+
+from app.services.datasets.licenses import (
+    detect_from_text,
+    detect_repository_license,
+    is_allowed,
+    redistribution_warning,
+)
+from app.services.datasets.quality import (
+    build_report,
+    clean_records,
+    dedupe_records,
+    looks_generated,
+    looks_minified,
+    validate_file,
+)
+from app.services.datasets.records import (
+    RecordMeta,
+    make_chat_record,
+    validate_record,
+    write_jsonl,
+)
+from app.services.datasets.secrets import redact, scan_text
+from app.services.rag.chunking import chunk_text
+from app.services.rag.embeddings import HashingEmbedder
+from app.services.rag.loaders import sanitize_filename
+
+
+# ------------------------------------------------------------------- chunking
+def test_chunks_cover_the_document_and_carry_line_numbers():
+    document = "\n".join(f"line {index} of the document" for index in range(1, 200))
+    chunks = chunk_text(document, chunk_size=400, chunk_overlap=80, extension=".txt")
+
+    assert chunks
+    assert chunks[0].start_line == 1
+    assert chunks[-1].end_line == 199
+    assert all(chunk.end_line >= chunk.start_line for chunk in chunks)
+    assert all(chunk.content.strip() for chunk in chunks)
+
+
+def test_overlap_repeats_context_between_neighbours():
+    document = "\n".join(f"row {index}" for index in range(1, 100))
+    chunks = chunk_text(document, chunk_size=200, chunk_overlap=80, extension=".txt")
+
+    assert len(chunks) > 1
+    for earlier, later in zip(chunks, chunks[1:]):
+        assert later.start_line <= earlier.end_line
+
+
+def test_code_chunks_prefer_definition_boundaries():
+    source = "".join(
+        f"def handler_{index}(request):\n    return request\n\n" for index in range(30)
+    )
+    chunks = chunk_text(source, chunk_size=300, chunk_overlap=50, extension=".py")
+
+    assert len(chunks) > 1
+    assert chunks[0].content.lstrip().startswith("def handler_0")
+
+
+def test_empty_input_produces_no_chunks():
+    assert chunk_text("   \n\n  ", chunk_size=400, chunk_overlap=50) == []
+
+
+def test_oversized_overlap_is_clamped_instead_of_looping_forever():
+    chunks = chunk_text("a\nb\nc\nd\ne\n" * 40, chunk_size=100, chunk_overlap=500)
+    assert chunks
+
+
+# ------------------------------------------------------------------ filenames
+@pytest.mark.parametrize(
+    "given,forbidden",
+    [
+        ("../../etc/passwd", ".."),
+        ("C:\\Windows\\system32\\evil.py", "\\"),
+        ("nested/dir/file.py", "/"),
+    ],
+)
+def test_filenames_lose_their_directory_components(given, forbidden):
+    assert forbidden not in sanitize_filename(given)
+
+
+def test_blank_filename_falls_back():
+    assert sanitize_filename("") == "upload.txt"
+    assert sanitize_filename("...") == "upload.txt"
+
+
+# -------------------------------------------------------------------- secrets
+def test_real_looking_credentials_are_detected():
+    findings = scan_text('GITHUB_TOKEN = "ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"')
+    assert any(finding.pattern == "github_token" for finding in findings)
+
+
+def test_placeholders_are_not_flagged():
+    assert scan_text('API_KEY = "your_api_key_here_placeholder"') == []
+
+
+def test_findings_never_echo_the_secret():
+    secret = "ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+    for finding in scan_text(f'token = "{secret}"'):
+        assert secret not in finding.preview
+
+
+def test_redaction_keeps_surrounding_code():
+    redacted = redact('client = Client(api_key="sk-abcdefghijklmnopqrstuvwx")')
+    assert "sk-abcdefghijklmnopqrstuvwx" not in redacted
+    assert "client = Client(" in redacted
+
+
+# ------------------------------------------------------------------- licenses
+def test_license_text_signatures(tmp_path):
+    mit = tmp_path / "mit"
+    mit.mkdir()
+    (mit / "LICENSE").write_text(
+        "MIT License\n\nPermission is hereby granted, free of charge, to any person",
+        encoding="utf-8",
+    )
+    assert detect_repository_license(mit).license_id == "MIT"
+
+
+def test_spdx_header_wins():
+    assert detect_from_text("# SPDX-License-Identifier: Apache-2.0").license_id == "Apache-2.0"
+
+
+def test_unrecognised_license_is_unknown_and_not_allowed(tmp_path):
+    empty = tmp_path / "empty"
+    empty.mkdir()
+    finding = detect_repository_license(empty)
+    assert finding.license_id == "UNKNOWN"
+    assert is_allowed(finding.license_id) is False
+
+
+def test_copyleft_and_unknown_counts_produce_warnings():
+    warnings = redistribution_warning({"GPL-3.0": 4, "UNKNOWN": 2, "MIT": 10})
+    joined = " ".join(warnings)
+    assert "GPL-3.0" in joined
+    assert "no detected license" in joined
+
+
+# -------------------------------------------------------------------- quality
+def test_generated_and_minified_files_are_recognised():
+    assert looks_generated("// @generated by protoc. DO NOT EDIT.\nvar a = 1;")
+    assert looks_minified("var a=1;" * 900)
+    assert not looks_minified("def add(a, b):\n    return a + b\n")
+
+
+def test_cleaning_drops_short_records_and_redacts_secrets():
+    records = [
+        {"text": "too short"},
+        {"text": "A properly sized paragraph about writing maintainable Python code. " * 3},
+        {"text": 'token = "ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789" and more text here to pass'},
+    ]
+    kept, stats = clean_records(records)
+
+    assert stats.dropped_short == 1
+    assert stats.redacted_secrets == 1
+    assert all("ghp_ABCDEFGHIJ" not in record["text"] for record in kept)
+
+
+def test_dedupe_removes_exact_and_near_duplicates():
+    base = "The retry helper waits with exponential backoff before trying the call again."
+    kept, stats = dedupe_records(
+        [{"text": base}, {"text": base}, {"text": base + " Extra."}, {"text": "Unrelated text about compiling Rust crates."}]
+    )
+    assert stats.exact_duplicates == 1
+    assert stats.near_duplicates == 1
+    assert len(kept) == 2
+
+
+def test_record_validation_catches_missing_roles():
+    problems = validate_record({"messages": [{"role": "user", "content": "hi"}]}, "sft_chat")
+    assert "no assistant message" in problems
+
+
+def test_validate_file_and_report_agree_on_counts(tmp_path):
+    path = tmp_path / "set.jsonl"
+    records = [
+        make_chat_record(
+            system=None,
+            user=f"Explain function number {index} in this Python module.",
+            assistant=f"It returns the {index}th element of the sequence.",
+            meta=RecordMeta(source="unit_test", license="MIT", language="python"),
+        )
+        for index in range(5)
+    ]
+    write_jsonl(path, records)
+
+    report = validate_file(path, "sft_chat")
+    assert report.total_records == 5
+    assert report.valid_records == 5
+    assert report.invalid_records == 0
+
+    summary = build_report(path)
+    assert summary["total_records"] == 5
+    assert summary["license_counts"] == {"MIT": 5}
+    assert summary["approx_tokens"] > 0
+    assert any("Review every upstream license" in warning for warning in summary["warnings"])
+
+
+# ------------------------------------------------------------------ embedding
+def test_hashing_embedder_is_deterministic_and_normalised():
+    embedder = HashingEmbedder()
+    first = embedder.embed(["def add(a, b): return a + b"])
+    second = embedder.embed(["def add(a, b): return a + b"])
+
+    assert first.shape == (1, embedder.dimension)
+    assert (first == second).all()
+    assert abs(float((first[0] ** 2).sum()) - 1.0) < 1e-5
+
+
+def test_hashing_embedder_separates_unrelated_text():
+    embedder = HashingEmbedder()
+    vectors = embedder.embed(
+        ["minecraft paper plugin event listener", "postgres index tuning and vacuum"]
+    )
+    assert float(vectors[0] @ vectors[1]) < 0.2
+
+
+# --------------------------------------------------------------------- config
+def test_yaml_profile_is_applied_but_environment_wins(tmp_path, monkeypatch):
+    from app import config
+
+    profile = tmp_path / "profile.yaml"
+    profile.write_text(
+        "model:\n  MODEL_BACKEND: mock\n  MAX_NEW_TOKENS: 321\n  TEMPERATURE: 0.9\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("BREAD_CONFIG_FILE", str(profile))
+    monkeypatch.setenv("TEMPERATURE", "0.11")
+    monkeypatch.setenv("BREAD_DATA_DIR", str(tmp_path / "data"))
+    config.reset_settings_cache()
+
+    settings = config.get_settings()
+    assert settings.max_new_tokens == 321
+    assert settings.temperature == pytest.approx(0.11)
+
+    config.reset_settings_cache()
+
+
+def test_missing_profile_file_is_a_clear_error(tmp_path, monkeypatch):
+    from app import config
+
+    monkeypatch.setenv("BREAD_CONFIG_FILE", str(tmp_path / "nope.yaml"))
+    config.reset_settings_cache()
+    with pytest.raises(FileNotFoundError):
+        config.get_settings()
+    config.reset_settings_cache()
+
+
+def test_system_prompt_falls_back_when_the_file_is_missing(tmp_path, monkeypatch):
+    from app import config
+
+    monkeypatch.setenv("SYSTEM_PROMPT_PATH", str(tmp_path / "absent.md"))
+    monkeypatch.setenv("BREAD_DATA_DIR", str(tmp_path / "data"))
+    config.reset_settings_cache()
+    assert "Bread" in config.get_settings().system_prompt()
+    config.reset_settings_cache()
+
+
+def test_shipped_system_prompt_is_used_by_default(bread_env):
+    prompt = bread_env.system_prompt()
+    assert "You are Bread" in prompt
+    assert Path("prompts/system_default.md").exists()

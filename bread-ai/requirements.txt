@@ -1,0 +1,26 @@
+# Bread backend: everything the API server needs.
+#
+#   python -m venv .venv
+#   .venv\Scripts\activate          (Windows)
+#   source .venv/bin/activate       (Linux/macOS)
+#   pip install -r requirements.txt
+#
+# This file deliberately does NOT install PyTorch, Transformers or bitsandbytes.
+# Those are large, CUDA-specific and easy to install wrong. Bread runs fine
+# without them using the mock backend or a GGUF model; see requirements-train.txt
+# and docs/WINDOWS_SETUP.md when you are ready for real inference or training.
+
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+pydantic>=2.7.0
+pydantic-settings>=2.3.0
+sqlmodel>=0.0.22
+SQLAlchemy>=2.0.30
+alembic>=1.13.0
+python-multipart>=0.0.9
+httpx>=0.27.0
+PyYAML>=6.0.1
+numpy>=1.26.0
+typer>=0.12.0
+rich>=13.7.0
+pypdf>=4.2.0

@@ -1,0 +1,38 @@
+# Optional: local model inference with Hugging Face Transformers.
+#
+# Install PyTorch FIRST, with the CUDA build that matches your driver. Do not
+# let pip resolve torch from this file; the default wheel on PyPI may be
+# CPU-only.
+#
+# For an RTX 5090 (Blackwell, compute capability 12.0) you need a torch build
+# compiled with CUDA 12.8 or newer. Older wheels will import fine and then fail
+# at the first kernel launch with "no kernel image is available for execution".
+#
+#   pip install torch --index-url https://download.pytorch.org/whl/cu128
+#   pip install -r requirements-inference.txt
+#
+# Then verify:
+#   python -c "import torch; print(torch.__version__, torch.cuda.is_available())"
+
+transformers>=4.44.0
+accelerate>=0.33.0
+sentencepiece>=0.2.0
+protobuf>=4.25.0
+
+# 4-bit and 8-bit quantization. On Windows use a wheel built for your CUDA
+# version; see docs/WINDOWS_SETUP.md if pip picks the wrong one.
+bitsandbytes>=0.43.0
+
+# LoRA adapters at inference time.
+peft>=0.12.0
+
+# Embeddings for retrieval. Bread falls back to a built-in hashing encoder when
+# this is absent, so search still works without it, just less well.
+sentence-transformers>=3.0.0
+
+# Vector store. The default NumPy store needs nothing extra; install this only
+# if you set VECTOR_BACKEND=chroma.
+# chromadb>=0.5.0
+
+# GGUF models through llama.cpp. Build with CUDA support for GPU offload.
+# llama-cpp-python>=0.2.90

@@ -1,0 +1,24 @@
+# Bread model profile: a GGUF file served through llama.cpp.
+#
+# Good when you would rather not install the PyTorch stack, or when you want a
+# larger model at a lower bit width. Bread never downloads the .gguf for you;
+# fetch it yourself and point GGUF_MODEL_PATH at the file.
+#
+#   BREAD_CONFIG_FILE=configs/model.gguf.yaml uvicorn app.main:app
+
+model:
+  MODEL_BACKEND: llama_cpp
+  MODEL_ID: local-gguf
+  GGUF_MODEL_PATH: "C:/models/qwen2.5-coder-7b-instruct-q4_k_m.gguf"
+  GGUF_N_GPU_LAYERS: -1        # -1 offloads every layer it can to the GPU
+  MAX_CONTEXT_LENGTH: 8192
+  MAX_NEW_TOKENS: 1024
+  TEMPERATURE: 0.2
+  TOP_P: 0.95
+  REPETITION_PENALTY: 1.05
+  SYSTEM_PROMPT_PATH: prompts/system_default.md
+
+rag:
+  EMBEDDING_MODEL_ID: sentence-transformers/all-MiniLM-L6-v2
+  RAG_ENABLED: true
+  RAG_TOP_K: 5
