@@ -104,3 +104,29 @@ def test_lan_binding_produces_warnings_and_forces_key_checks(bread_env, monkeypa
 def test_lan_detection(bread_env, monkeypatch, host, expected):
     monkeypatch.setattr(bread_env, "host", host)
     assert bread_env.binds_to_lan is expected
+
+
+def test_audit_log_records_state_changing_actions(client):
+    space = client.post("/api/knowledge-spaces", json={"name": "Audited"}).json()
+    client.delete(f"/api/knowledge-spaces/{space['id']}")
+    client.post("/api/models/load", json={"backend": "mock"})
+
+    entries = client.get("/api/audit-logs").json()
+    actions = [entry["action"] for entry in entries]
+
+    assert "knowledge_space.create" in actions
+    assert "knowledge_space.delete" in actions
+    assert "model.load" in actions
+
+    creation = next(entry for entry in entries if entry["action"] == "knowledge_space.create")
+    assert creation["target_id"] == space["id"]
+    assert creation["detail"]["name"] == "Audited"
+
+
+def test_audit_log_is_newest_first_and_respects_the_limit(client):
+    for index in range(4):
+        client.post("/api/knowledge-spaces", json={"name": f"Space {index}"})
+
+    entries = client.get("/api/audit-logs", params={"limit": 2}).json()
+    assert len(entries) == 2
+    assert entries[0]["created_at"] >= entries[1]["created_at"]

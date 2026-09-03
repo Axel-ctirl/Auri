@@ -222,6 +222,7 @@ PATCH  /api/settings
 GET    /api/api-keys
 POST   /api/api-keys
 DELETE /api/api-keys/{id}
+GET    /api/audit-logs          ?limit=  Recent state-changing actions.
 GET    /api/prompts/presets
 GET    /api/prompts/presets/{name}
 ```

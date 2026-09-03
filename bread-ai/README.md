@@ -248,7 +248,8 @@ bread-ai/
 ├── backend/app/          FastAPI application
 │   ├── routers/          One module per endpoint group
 │   └── services/         Inference backends, RAG, datasets, training
-├── backend/tests/        99 pytest tests, no GPU required
+├── backend/alembic/      Migrations, for changes create_all cannot express
+├── backend/tests/        101 pytest tests, no GPU required
 ├── frontend/src/         React + TypeScript interface
 ├── scripts/              Dataset collection, cleaning, training, evaluation
 ├── configs/              Model profiles, training configs, license policy

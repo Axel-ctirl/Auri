@@ -138,7 +138,9 @@ SQLite through SQLModel, in one file under `data/`. Thirteen tables:
 `init_db()` is idempotent: it creates tables, seeds the built-in model catalogue
 and a default knowledge space, then adds any nullable column a newer Bread
 expects on an older file. Anything more invasive than an added nullable column
-belongs in an Alembic revision.
+belongs in an Alembic revision; the environment is set up under
+`backend/alembic/` and reads its database URL from Bread's own settings, so a
+migration always targets the file the server uses.
 
 Sessions are opened with `expire_on_commit=False`. Bread commits often (audit
 rows, counters), and with the default the ORM objects a request is still holding
@@ -161,7 +163,7 @@ emits `frontend/dist`, which the backend mounts and serves with an SPA fallback.
 
 ## Testing
 
-99 backend tests and 22 frontend tests. The backend suite runs against a
+101 backend tests and 22 frontend tests. The backend suite runs against a
 temporary SQLite file with the mock backend and the hashing embedder, so it
 needs no GPU, no model weights and no network. It covers the HTTP surface,
 retrieval end to end, the security rules, the dataset pipeline from collection

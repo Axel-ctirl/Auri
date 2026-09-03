@@ -27,6 +27,7 @@ from .db import get_engine, init_db
 from .errors import RateLimitedError, register_exception_handlers
 from .routers import (
     apikeys,
+    audit,
     chat,
     conversations,
     datasets,
@@ -135,6 +136,7 @@ def create_app() -> FastAPI:
         training.router,
         settings_router.router,
         apikeys.router,
+        audit.router,
         prompts.router,
     ):
         protected.include_router(router)

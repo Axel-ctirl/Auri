@@ -23,7 +23,6 @@ OPTIONAL_DEPENDENCIES = (
     "datasets",
     "sentence_transformers",
     "chromadb",
-    "faiss",
     "llama_cpp",
     "pypdf",
 )

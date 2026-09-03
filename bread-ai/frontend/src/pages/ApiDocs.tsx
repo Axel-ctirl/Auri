@@ -101,6 +101,7 @@ const GROUPS: { title: string; description: string; endpoints: Endpoint[] }[] = 
       { method: "PATCH", path: "/api/settings", summary: "Update runtime settings." },
       { method: "POST", path: "/api/api-keys", summary: "Create a key (plaintext shown once)." },
       { method: "DELETE", path: "/api/api-keys/{id}", summary: "Revoke a key." },
+      { method: "GET", path: "/api/audit-logs", summary: "Recent state-changing actions." },
     ],
   },
 ];
