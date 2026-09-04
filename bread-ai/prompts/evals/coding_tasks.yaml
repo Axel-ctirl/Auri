@@ -1,0 +1,223 @@
+# Executable coding tasks for measuring a model's actual ability.
+#
+# Each task gives the model a prompt and keeps a test hidden from it. The
+# runner extracts the code block from the model's answer, runs the test against
+# it in a subprocess, and scores pass or fail. That is an objective measure:
+# either the code works or it does not.
+#
+# The tasks are deliberately ordinary. They are the kind of thing that fills a
+# working day, not puzzles. A model that passes these is useful; a model that
+# passes contest problems and fails these is not.
+#
+# Adding tasks: keep the prompt free of hints the test depends on, and make the
+# test check behaviour rather than implementation.
+
+tasks:
+  - id: restock_quantity
+    difficulty: easy
+    prompt: |
+      Write a Python function `restock_quantity(current_stock, reorder_point, target_stock)`
+      that returns how many units to order so stock reaches the target level.
+      Return 0 when current stock is at or above the reorder point.
+    test: |
+      assert restock_quantity(2, 5, 20) == 18
+      assert restock_quantity(5, 5, 20) == 0
+      assert restock_quantity(30, 5, 20) == 0
+      assert restock_quantity(0, 10, 10) == 10
+
+  - id: safe_average
+    difficulty: easy
+    prompt: |
+      Write a Python function `safe_average(values)` that returns the mean of a
+      list of numbers. Raise a ValueError with a clear message when the list is
+      empty, rather than letting a ZeroDivisionError escape.
+    test: |
+      assert safe_average([2, 4, 6]) == 4
+      assert safe_average([5]) == 5
+      try:
+          safe_average([])
+      except ValueError:
+          pass
+      except ZeroDivisionError:
+          raise AssertionError("raised ZeroDivisionError instead of ValueError")
+      else:
+          raise AssertionError("did not raise on an empty list")
+
+  - id: chunk_list
+    difficulty: easy
+    prompt: |
+      Write a Python function `chunk_list(items, size)` that splits a list into
+      consecutive chunks of at most `size` items. The final chunk may be shorter.
+      Raise ValueError if size is less than 1.
+    test: |
+      assert chunk_list([1, 2, 3, 4, 5], 2) == [[1, 2], [3, 4], [5]]
+      assert chunk_list([], 3) == []
+      assert chunk_list([1, 2, 3], 5) == [[1, 2, 3]]
+      try:
+          chunk_list([1], 0)
+      except ValueError:
+          pass
+      else:
+          raise AssertionError("did not reject a size of 0")
+
+  - id: parse_duration
+    difficulty: medium
+    prompt: |
+      Write a Python function `parse_duration(text)` that converts a duration
+      string such as "1h30m", "45s" or "2h" into a whole number of seconds.
+      Supported units are h, m and s. Raise ValueError on anything unparseable.
+    test: |
+      assert parse_duration("45s") == 45
+      assert parse_duration("2h") == 7200
+      assert parse_duration("1h30m") == 5400
+      assert parse_duration("1h30m15s") == 5415
+      for bad in ["", "abc", "10x", "h"]:
+          try:
+              parse_duration(bad)
+          except ValueError:
+              pass
+          else:
+              raise AssertionError(f"accepted invalid input {bad!r}")
+
+  - id: merge_intervals
+    difficulty: medium
+    prompt: |
+      Write a Python function `merge_intervals(intervals)` that merges a list of
+      overlapping (start, end) tuples into the smallest list of non-overlapping
+      intervals, sorted by start. Touching intervals such as (1, 3) and (3, 5)
+      count as overlapping.
+    test: |
+      assert merge_intervals([(1, 3), (2, 6), (8, 10)]) == [(1, 6), (8, 10)]
+      assert merge_intervals([]) == []
+      assert merge_intervals([(5, 7), (1, 2)]) == [(1, 2), (5, 7)]
+      assert merge_intervals([(1, 3), (3, 5)]) == [(1, 5)]
+      assert merge_intervals([(1, 10), (2, 3)]) == [(1, 10)]
+
+  - id: word_frequency
+    difficulty: medium
+    prompt: |
+      Write a Python function `word_frequency(text, limit)` that returns the
+      `limit` most common words in `text` as a list of (word, count) tuples,
+      ordered by count descending then alphabetically. Comparison is
+      case-insensitive and punctuation is ignored.
+    test: |
+      result = word_frequency("the cat the dog THE bird cat", 2)
+      assert result == [("the", 3), ("cat", 2)], result
+      assert word_frequency("", 5) == []
+      tie = word_frequency("b a b a c", 3)
+      assert tie == [("a", 2), ("b", 2), ("c", 1)], tie
+
+  - id: retry_with_backoff
+    difficulty: medium
+    prompt: |
+      Write a Python function `retry(operation, attempts, on_error=None)` that
+      calls `operation()` and retries on exception up to `attempts` times total.
+      It returns the first successful result. If every attempt fails it raises
+      the last exception. Do not sleep between attempts.
+    test: |
+      calls = {"n": 0}
+      def flaky():
+          calls["n"] += 1
+          if calls["n"] < 3:
+              raise RuntimeError("not yet")
+          return "ok"
+      assert retry(flaky, 5) == "ok"
+      assert calls["n"] == 3
+
+      def always():
+          raise ValueError("nope")
+      try:
+          retry(always, 2)
+      except ValueError:
+          pass
+      else:
+          raise AssertionError("did not raise after exhausting attempts")
+
+      assert retry(lambda: 7, 1) == 7
+
+  - id: flatten_nested
+    difficulty: medium
+    prompt: |
+      Write a Python function `flatten(nested)` that flattens an arbitrarily
+      nested list of lists into a single flat list, preserving order. Strings
+      must be treated as values, not as sequences to flatten.
+    test: |
+      assert flatten([1, [2, [3, [4]]], 5]) == [1, 2, 3, 4, 5]
+      assert flatten([]) == []
+      assert flatten(["ab", ["cd"]]) == ["ab", "cd"]
+      assert flatten([[[[]]]]) == []
+
+  - id: sanitize_filename
+    difficulty: medium
+    prompt: |
+      Write a Python function `sanitize_filename(name)` that reduces a
+      user-supplied filename to a safe basename. Strip any directory components,
+      replace anything outside A-Z, a-z, 0-9, dot, underscore and hyphen with an
+      underscore, and return "unnamed" when nothing usable is left.
+    test: |
+      assert sanitize_filename("../../etc/passwd") == "passwd"
+      assert sanitize_filename("my file.txt") == "my_file.txt"
+      assert sanitize_filename("C:\\Windows\\evil.exe") == "evil.exe"
+      assert sanitize_filename("") == "unnamed"
+      assert sanitize_filename("...") == "unnamed"
+      assert sanitize_filename("ok-name_1.py") == "ok-name_1.py"
+
+  - id: lru_cache_class
+    difficulty: hard
+    prompt: |
+      Write a Python class `LRUCache` with `__init__(self, capacity)`, `get(key)`
+      returning None when the key is absent, and `put(key, value)`. When the
+      cache is full, putting a new key evicts the least recently used entry.
+      Both get and put count as a use.
+    test: |
+      cache = LRUCache(2)
+      cache.put("a", 1)
+      cache.put("b", 2)
+      assert cache.get("a") == 1
+      cache.put("c", 3)          # evicts b, because a was just used
+      assert cache.get("b") is None
+      assert cache.get("a") == 1
+      assert cache.get("c") == 3
+      cache.put("a", 10)
+      assert cache.get("a") == 10
+
+  - id: group_by_key
+    difficulty: easy
+    prompt: |
+      Write a Python function `group_by(rows, key)` that groups a list of
+      dictionaries into a dict mapping each distinct value of `rows[i][key]` to
+      the list of rows having it. Preserve the original order within each group.
+      Rows missing the key are skipped.
+    test: |
+      rows = [
+          {"team": "a", "n": 1},
+          {"team": "b", "n": 2},
+          {"team": "a", "n": 3},
+          {"n": 4},
+      ]
+      grouped = group_by(rows, "team")
+      assert set(grouped) == {"a", "b"}
+      assert [r["n"] for r in grouped["a"]] == [1, 3]
+      assert [r["n"] for r in grouped["b"]] == [2]
+      assert group_by([], "team") == {}
+
+  - id: fix_the_bug
+    difficulty: medium
+    prompt: |
+      This Python function is meant to return the second largest distinct value
+      in a list, or None when there are fewer than two distinct values. It is
+      wrong. Return a corrected version, keeping the name `second_largest`.
+
+      ```python
+      def second_largest(values):
+          values.sort()
+          return values[-2]
+      ```
+    test: |
+      assert second_largest([3, 1, 4, 4, 2]) == 3
+      assert second_largest([5]) is None
+      assert second_largest([]) is None
+      assert second_largest([2, 2, 2]) is None
+      original = [3, 1, 2]
+      second_largest(original)
+      assert original == [3, 1, 2], "the input list was mutated"

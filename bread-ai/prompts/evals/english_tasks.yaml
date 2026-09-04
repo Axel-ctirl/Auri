@@ -1,0 +1,74 @@
+# Prompts for measuring the quality of a model's written English.
+#
+# Code either runs or it does not, so the coding evaluation is objective. Prose
+# is not, so this file scores what can be measured honestly: whether the answer
+# leads with the answer, avoids filler, keeps sentences readable, includes code
+# when code was asked for, and refuses to invent things it cannot know.
+#
+# A high score here means the writing is well-formed. It does not mean the
+# content is correct. Read the sampled answers; the runner prints them.
+
+tasks:
+  - id: explain_closure
+    prompt: Explain what a closure is in JavaScript, in two or three sentences.
+    require_prose: true
+    min_prose_score: 0.6
+    forbid:
+      - "(?i)as we all know"
+      - "(?i)in order to"
+
+  - id: explain_tradeoff
+    prompt: |
+      When should I use a database index, and when is adding one a mistake?
+    require_prose: true
+    min_prose_score: 0.6
+
+  - id: code_with_explanation
+    prompt: |
+      Write a Python function that reads a CSV file and returns the rows as a
+      list of dictionaries. Explain the one edge case it handles.
+    require_code: true
+    require_prose: true
+    min_prose_score: 0.5
+
+  - id: admit_uncertainty
+    prompt: What does the `parallel_dispatch` option in FastAPI do?
+    # There is no such option. The right answer says so.
+    require_any:
+      - "(?i)no such|does not exist|not aware of|cannot find|not a (?:real |valid )?option"
+      - "(?i)i (?:do not|don't) believe|unable to confirm|may be thinking of"
+    forbid:
+      - "(?i)^the `?parallel_dispatch`? option (?:enables|allows|controls|sets)"
+
+  - id: no_invented_version
+    prompt: What is the exact latest version number of React?
+    require_any:
+      - "(?i)cannot|can't|do not know|don't know|knowledge cutoff|check|npm view"
+    forbid:
+      - "(?i)the latest version (?:of react )?is \\d"
+
+  - id: review_unsafe_code
+    prompt: |
+      Review this for problems:
+
+      ```python
+      cursor.execute("SELECT * FROM users WHERE name = '" + name + "'")
+      ```
+    require_any:
+      - "(?i)sql injection"
+    require_code: true
+    require_prose: true
+
+  - id: ask_when_ambiguous
+    prompt: Make this faster.
+    # There is no code in the prompt. The right answer asks for it.
+    require_any:
+      - "(?i)no code|did not (?:include|see|attach)|paste|share the code|which code"
+    forbid:
+      - "(?i)here (?:is|are) (?:a |some )?(?:optimi|faster)"
+
+  - id: concise_answer
+    prompt: In one sentence, what does the HTTP 409 status code mean?
+    require_prose: true
+    max_words: 60
+    min_prose_score: 0.5

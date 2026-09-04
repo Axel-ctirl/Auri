@@ -92,15 +92,67 @@ def test_local_collection_keeps_permissive_code_and_skips_copyleft(client, tmp_p
 
     run = _wait_for_run(client, started["id"])
     assert run["status"] == "completed", run["error"]
-    assert run["record_count"] == 1
+
+    # Two documented functions in the MIT project, each yielding an implement,
+    # an explain and a document task. Nothing from the copyleft project.
+    assert run["record_count"] == 6
 
     report = client.get(
         "/api/datasets/report", params={"path": run["output_path"]}
     ).json()
-    assert report["total_records"] == 1
-    assert report["license_counts"] == {"MIT": 1}
-    assert report["language_counts"] == {"python": 1}
+    assert report["total_records"] == 6
+    assert report["license_counts"] == {"MIT": 6}
+    assert report["language_counts"] == {"python": 6}
+    assert set(report["source_counts"]) == {
+        "local_code/implement",
+        "local_code/explain",
+        "local_code/document",
+    }
     assert any("license" in warning.lower() for warning in report["warnings"])
+
+
+def test_collected_records_are_tasks_rather_than_restatements(client, tmp_path):
+    """Guards the defect the extractor exists to fix.
+
+    Asking a model to repeat a file back teaches copying. Every record must pose
+    a question whose answer is not simply the question restated.
+    """
+
+    workspace = tmp_path / "projects"
+    _make_repo(workspace, "shop-plugin", MIT_LICENSE, {"inventory.py": SAMPLE_MODULE})
+
+    started = client.post(
+        "/api/datasets/collect",
+        json={
+            "name": "task shape",
+            "source": "local_code",
+            "input_paths": [str(workspace)],
+            "languages": ["python"],
+        },
+    ).json()
+    run = _wait_for_run(client, started["id"])
+
+    records = [
+        json.loads(line)
+        for line in Path(run["output_path"]).read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    assert records
+
+    for record in records:
+        user = record["messages"][1]["content"]
+        assistant = record["messages"][2]["content"]
+        assert user.strip() != assistant.strip()
+        assert assistant.strip()
+
+    explanations = [
+        record["messages"][2]["content"]
+        for record in records
+        if record["meta"]["source"].endswith("/explain")
+    ]
+    assert explanations
+    # An explanation is English, not a repeat of the code.
+    assert all("```" not in text for text in explanations)
 
 
 def test_files_containing_credentials_are_left_out(client, tmp_path):
@@ -123,7 +175,8 @@ def test_files_containing_credentials_are_left_out(client, tmp_path):
     ).json()
     run = _wait_for_run(client, started["id"])
 
-    assert run["record_count"] == 1
+    # Only the safe module contributes, and it yields three tasks.
+    assert run["record_count"] == 6
     contents = Path(run["output_path"]).read_text(encoding="utf-8")
     assert "ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789" not in contents
 
@@ -146,6 +199,9 @@ def test_manifest_records_provenance(client, tmp_path):
     manifest = json.loads(run["manifest_json"] or "{}")
     assert manifest["source"] == "local_code"
     assert manifest["license_summary"] == {"MIT": 1}
+    extraction = manifest["configuration"]["extraction"]
+    assert extraction["units_found"] >= 2
+    assert extraction["units_accepted"] >= 1
     assert manifest["warnings"]
     assert manifest["collected_at"]
 

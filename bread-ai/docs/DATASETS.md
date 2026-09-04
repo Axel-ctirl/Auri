@@ -31,6 +31,12 @@ python scripts/collect_local_code.py \
   --max-records 5000
 ```
 
+The collector derives instruction tasks from the documentation your code
+already carries rather than asking the model to restate files. One documented
+function becomes an `implement`, an `explain` and a `document` task; a project's
+tests become `test` tasks. See [QUALITY.md](QUALITY.md) for why that matters and
+what gets filtered out.
+
 For each file the collector:
 
 - finds the project it belongs to by walking up to the nearest LICENSE file or

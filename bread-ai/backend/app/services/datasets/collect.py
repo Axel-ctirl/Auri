@@ -17,6 +17,13 @@ from datetime import UTC
 from pathlib import Path
 from typing import Any
 
+from .code_tasks import (
+    ExtractionStats,
+    build_tasks,
+    build_test_tasks,
+    extract_units,
+    is_worth_training_on,
+)
 from .licenses import (
     DEFAULT_ALLOWED_LICENSES,
     LICENSE_FILENAMES,
@@ -149,6 +156,9 @@ class CollectionOptions:
     dataset_config: str | None = None
     split: str = "train"
     instruction_style: bool = True
+    # Which instruction tasks to derive from each documented definition. See
+    # code_tasks.py for what each one teaches.
+    task_kinds: tuple[str, ...] = ("implement", "explain", "document", "test")
 
 
 # ------------------------------------------------------------------ local code
@@ -247,6 +257,8 @@ def collect_local_code(
     records: list[dict[str, Any]] = []
     skipped_secret = 0
     skipped_license = 0
+    stats = ExtractionStats()
+    units_by_repo: dict[Path, list[tuple[list[Any], RecordMeta]]] = {}
 
     for base_root, path, language in iter_source_files(
         roots,
@@ -284,28 +296,47 @@ def collect_local_code(
         )
 
         if options.instruction_style:
-            record = make_chat_record(
-                system="You are Bread, a local coding assistant. Explain code accurately "
-                "and keep the explanation grounded in what the file actually does.",
-                user=(
-                    f"Here is `{relative}` from the project `{repo_root.name}` "
-                    f"({language}). Explain what it does, then restate the file.\n\n"
-                    f"```{language}\n{text}\n```"
-                ),
-                assistant=(
-                    f"`{relative}` is a {language} file in `{repo_root.name}`.\n\n"
-                    f"```{language}\n{text}\n```"
-                ),
-                meta=meta,
-            )
-        else:
-            record = make_text_record(text, meta)
+            # Derive real tasks from the documentation the code already carries,
+            # rather than asking the model to restate a file back at us.
+            stats.files += 1
+            units = extract_units(text, language, relative)
+            stats.units_found += len(units)
+            units_by_repo.setdefault(repo_root, []).append((units, meta))
 
-        records.append(record)
+            new_records: list[dict[str, Any]] = []
+            for unit in units:
+                built = build_tasks(unit, meta, kinds=options.task_kinds)
+                if built:
+                    stats.units_accepted += 1
+                else:
+                    accepted, reason = is_worth_training_on(unit)
+                    if not accepted:
+                        stats.reject(reason)
+                new_records.extend(built)
+
+            if not new_records:
+                continue
+            records.extend(new_records)
+        else:
+            records.append(make_text_record(text, meta))
+
         license_counts[license_id] = license_counts.get(license_id, 0) + 1
         language_counts[language] = language_counts.get(language, 0) + 1
         if progress and len(records) % 100 == 0:
             progress(len(records))
+
+    # Tests are matched to the functions they exercise across a whole project,
+    # so this pass happens after every file in the repo has been read.
+    if options.instruction_style and "test" in options.task_kinds:
+        for repo_units in units_by_repo.values():
+            flattened = [unit for units, _meta in repo_units for unit in units]
+            if not flattened:
+                continue
+            first_meta = repo_units[0][1]
+            records.extend(build_test_tasks(flattened, first_meta))
+
+    records = records[: options.max_records]
+    stats.records = len(records)
 
     written = write_jsonl(options.output_path, records)
     manifest = DatasetManifest(
@@ -322,6 +353,8 @@ def collect_local_code(
             "allowed_licenses": list(options.allowed_licenses),
             "skipped_for_license": skipped_license,
             "skipped_for_secrets": skipped_secret,
+            "task_kinds": list(options.task_kinds),
+            "extraction": stats.as_dict(),
         },
         size_limits={
             "max_records": options.max_records,

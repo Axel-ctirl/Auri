@@ -213,6 +213,29 @@ runs the same scripts and tails their logs. See
 
 ---
 
+## Data quality and evaluation
+
+The collector does not ask the model to restate files back. It derives real
+tasks from the documentation your code already carries: a docstring becomes an
+`implement` task, an `explain` task and a `document` task, and a repository's
+tests become `test` tasks. Docstrings are filtered by an English quality scorer,
+so filler and reference markup never train the voice.
+
+Measure the result rather than guessing at it:
+
+```bash
+python scripts/eval_bread.py --model-id <model> --run-code --save-answers answers.json
+```
+
+Coding is scored objectively: twelve tasks, each with a hidden test, the model's
+code extracted and run in a subprocess. English is scored against a rubric that
+measures form and catches confabulation, including three tasks where the right
+answer is "I do not know".
+
+See [docs/QUALITY.md](docs/QUALITY.md).
+
+---
+
 ## Pretraining a model from scratch
 
 If you want weights with no external lineage at all, Bread can pretrain one. No
@@ -315,7 +338,7 @@ bread-ai/
 │   ├── routers/          One module per endpoint group
 │   └── services/         Inference backends, RAG, datasets, training
 ├── backend/alembic/      Migrations, for changes create_all cannot express
-├── backend/tests/        143 pytest tests, no GPU required
+├── backend/tests/        175 pytest tests, no GPU required
 ├── frontend/src/         React + TypeScript interface
 ├── scripts/              Dataset collection, cleaning, training, evaluation
 ├── configs/              Model profiles, training and pretraining configs

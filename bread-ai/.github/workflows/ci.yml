@@ -139,6 +139,12 @@ jobs:
           python scripts/bake_bread_model.py --dry-run --output-name ci-bake || true
           test ! -d data/models/ci-bake
 
+      - name: The coding benchmark is solvable and the rubric discriminates
+        # No model needed: this checks the evaluators themselves, so a broken
+        # benchmark cannot silently make a model look bad.
+        run: |
+          python -m pytest backend/tests/test_quality.py -q
+
       - name: External collectors refuse without accepted terms
         run: |
           ! python scripts/collect_stack_sample.py

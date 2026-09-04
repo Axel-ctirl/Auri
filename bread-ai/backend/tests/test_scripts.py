@@ -23,8 +23,11 @@ MIT_LICENSE = (
 MODULE_TEMPLATE = '''"""Inventory helpers, module {index}."""
 
 
-def calculate_restock_quantity(current_stock, reorder_point, target_stock):
-    """Return how many units to order so stock reaches the target level."""
+def calculate_restock_quantity_{index}(current_stock, reorder_point, target_stock):
+    """Return how many units to order so stock reaches the target level.
+
+    Returns zero when current stock is already at or above the reorder point.
+    """
 
     if current_stock >= reorder_point:
         return 0
@@ -32,6 +35,11 @@ def calculate_restock_quantity(current_stock, reorder_point, target_stock):
 
 
 def summarize_orders_{index}(orders):
+    """Total a list of orders and report how many there were.
+
+    Amounts stay in whole cents so no rounding happens before display.
+    """
+
     total = sum(order["amount_in_cents"] for order in orders)
     return {{"count": len(orders), "total_cents": total}}
 '''
@@ -92,6 +100,8 @@ def test_full_pipeline_from_collection_to_training_file(sample_project, tmp_path
     manifest = json.loads(raw.with_suffix(".manifest.json").read_text(encoding="utf-8"))
     assert manifest["license_summary"] == {"MIT": 6}
     assert manifest["warnings"]
+    # Six files, two documented functions each, three tasks per function.
+    assert manifest["configuration"]["extraction"]["units_accepted"] == 12
 
     cleaned = tmp_path / "clean.jsonl"
     assert load_script("clean_dataset").main(["--input", str(raw), "--output", str(cleaned)]) == 0
@@ -102,8 +112,16 @@ def test_full_pipeline_from_collection_to_training_file(sample_project, tmp_path
 
     assert load_script("dataset_report").main(["--input", str(cleaned), "--json"]) == 0
     report = json.loads(capsys.readouterr().out)
-    assert report["total_records"] == 6
-    assert report["license_counts"] == {"MIT": 6}
+    # The six fixture modules share their docstrings, so cleaning collapses the
+    # near-duplicate tasks. That is the deduplicator doing its job.
+    raw_records = [line for line in raw.read_text(encoding="utf-8").splitlines() if line.strip()]
+    assert len(raw_records) == 36
+    assert 0 < report["total_records"] < 36
+    assert set(report["source_counts"]) <= {
+        "local_code/implement",
+        "local_code/explain",
+        "local_code/document",
+    }
 
     training_file = tmp_path / "sft.jsonl"
     assert (
