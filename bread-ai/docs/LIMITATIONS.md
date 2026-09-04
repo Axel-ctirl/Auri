@@ -37,6 +37,17 @@ It will not write code. It will not answer questions. It is not a small version
 of a useful model, it is a demonstration of a mechanism. The script says so when
 you run it, and the config says so in its header.
 
+## A baked Bread model is still a derivative
+
+`scripts/bake_bread_model.py` produces weights that answer as Bread and ship as
+one directory. That is a real model file, and it is a fine-tune of an
+open-weight base, not a model trained from nothing.
+
+The generated model card says which base, under which license, and what the
+fine-tune did and did not change. Keep those sections if you share the weights.
+Removing them does not make the model more original; it only makes the claim
+dishonest.
+
 ## Bread is not as capable as a hosted frontier model
 
 A 7B or 14B open-weight coding model is good at: completing code in a familiar

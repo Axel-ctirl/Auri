@@ -19,7 +19,6 @@ import argparse
 from pathlib import Path
 
 from _bootstrap import print_header, print_table
-
 from app.services.datasets.quality import dedupe_records
 from app.services.datasets.records import read_jsonl, write_jsonl
 

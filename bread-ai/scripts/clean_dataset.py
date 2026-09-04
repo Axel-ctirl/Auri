@@ -19,7 +19,6 @@ import argparse
 from pathlib import Path
 
 from _bootstrap import print_header, print_table
-
 from app.services.datasets.quality import clean_file
 
 

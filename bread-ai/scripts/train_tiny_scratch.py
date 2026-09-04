@@ -34,6 +34,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+
 from _bootstrap import REPO_ROOT, print_header, print_table
 
 

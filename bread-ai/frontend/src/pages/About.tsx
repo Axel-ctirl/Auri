@@ -58,6 +58,27 @@ export default function About() {
       </section>
 
       <section className="panel mb-5 p-5">
+        <h2 className="mb-2 text-sm font-medium text-ink-200">Bread's own weights</h2>
+        <div className="space-y-3 text-sm leading-relaxed text-ink-300">
+          <p>
+            By default Bread is an application pointed at somebody else's open-weight model.
+            You can also bake weights that are Bread's own: a fine-tune on a version-controlled
+            corpus defining this identity and answering style, merged into a standalone model
+            directory you can load anywhere or hand to someone else.
+          </p>
+          <p>
+            Those weights are still a derivative of the base model they started from, and the
+            model card generated alongside them says which base, under which license, and what
+            the fine-tune did and did not change. Nothing here trains a model from nothing.
+          </p>
+          <p className="text-ink-400">
+            Run <code className="text-crust-200">scripts/bake_bread_model.py --dry-run</code>{" "}
+            to see what it would do.
+          </p>
+        </div>
+      </section>
+
+      <section className="panel mb-5 p-5">
         <h2 className="mb-2 text-sm font-medium text-ink-200">Your data</h2>
         <ul className="space-y-2 text-sm leading-relaxed text-ink-300">
           <li>· Conversations, documents, vectors and datasets live in one directory on this machine.</li>

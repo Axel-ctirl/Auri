@@ -16,7 +16,6 @@ import argparse
 from pathlib import Path
 
 from _bootstrap import print_header
-
 from app.services.datasets.collect import PROJECT_MARKERS, SKIP_DIRECTORIES
 from app.services.datasets.licenses import (
     DEFAULT_ALLOWED_LICENSES,

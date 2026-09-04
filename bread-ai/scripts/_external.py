@@ -13,7 +13,6 @@ import sys
 from pathlib import Path
 
 from _bootstrap import print_header, print_table, resolve_output
-
 from app.services.datasets import (
     DEFAULT_ALLOWED_LICENSES,
     EXTERNAL_SOURCES,

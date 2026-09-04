@@ -1,0 +1,96 @@
+# Bake Bread's identity and voice into a set of weights.
+#
+# This is the config behind `scripts/bake_bread_model.py`. It fine-tunes an
+# open-weight base on prompts/identity.yaml mixed with your own general coding
+# data, then the bake script merges the adapter so the result is a standalone
+# model directory rather than a base plus a patch.
+#
+# What this produces
+# ------------------
+# A model that calls itself Bread, answers in Bread's voice, states what it is
+# derived from, and refuses to claim it is a frontier model. It is a derivative
+# of the base model below, and the generated model card says so.
+#
+# What it does not produce
+# -----------------------
+# New knowledge. Fine-tuning reliably teaches *how* to answer and unreliably
+# teaches *what is true*. If you want the model to know your API surface, index
+# it into a knowledge space and let retrieval supply it.
+#
+# The settings differ from qlora_7b.yaml in two deliberate ways: a lower
+# learning rate and fewer epochs. Identity data is small and highly repetitive,
+# and the failure mode of training it hard is a model that introduces itself
+# charmingly and has forgotten how to write a loop.
+
+description: Bake Bread's identity and voice into standalone weights.
+method: qlora
+min_vram_gb: 16
+
+base_model_id: Qwen/Qwen2.5-Coder-7B-Instruct
+tokenizer_id: ""
+dataset_path: data/datasets/bread_identity.jsonl
+dataset_schema: sft_chat
+eval_split_ratio: 0.05
+output_dir: data/runs/bread-identity
+
+# ----------------------------------------------------------------- quantization
+load_in_4bit: true
+bnb_4bit_quant_type: nf4
+bnb_4bit_use_double_quant: true
+bnb_4bit_compute_dtype: bfloat16
+
+# ------------------------------------------------------------------------ LoRA
+# Rank 16 rather than 32: this is a behavioural nudge, not a capability
+# transplant, and a smaller adapter is harder to overfit on a small corpus.
+lora_r: 16
+lora_alpha: 32
+lora_dropout: 0.05
+lora_bias: none
+lora_target_modules:
+  - q_proj
+  - k_proj
+  - v_proj
+  - o_proj
+  - gate_proj
+  - up_proj
+  - down_proj
+
+# -------------------------------------------------------------------- schedule
+# 1e-4 rather than 2e-4, and two epochs rather than three. Identity records
+# repeat by design, so the model sees each one many times per epoch already.
+num_train_epochs: 2
+max_steps: -1
+per_device_train_batch_size: 1
+gradient_accumulation_steps: 16
+learning_rate: 0.0001
+lr_scheduler_type: cosine
+warmup_ratio: 0.05
+weight_decay: 0.0
+max_grad_norm: 0.3
+optim: paged_adamw_8bit
+max_seq_length: 2048
+packing: false
+
+# ------------------------------------------------------------------- execution
+bf16: true
+fp16: false
+gradient_checkpointing: true
+group_by_length: true
+logging_steps: 5
+save_steps: 100
+save_total_limit: 3
+eval_steps: 100
+seed: 20260903
+report_to: none
+
+# ------------------------------------------------------------------ bake stage
+# Read by scripts/bake_bread_model.py after training finishes.
+bake:
+  model_name: bread-coder-7b
+  merged_dir: data/models/bread-coder-7b
+  merge_dtype: bfloat16
+  # 'cpu' is slower and needs no VRAM, which matters because the merge loads the
+  # base model at full precision rather than 4-bit.
+  merge_device: cpu
+  mix_ratio: 8
+  identity_repeat: 2

@@ -18,8 +18,9 @@ Two things to know before you use this data:
 
 from __future__ import annotations
 
-from _bootstrap import REPO_ROOT  # noqa: F401
 from _external import build_parser, run
+
+from _bootstrap import REPO_ROOT  # noqa: F401
 
 SOURCE = "the_stack"
 

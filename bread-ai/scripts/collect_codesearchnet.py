@@ -13,8 +13,9 @@ field is what matters, not the dataset-level label, and Bread filters on it.
 
 from __future__ import annotations
 
-from _bootstrap import REPO_ROOT  # noqa: F401  (puts backend/ on sys.path)
 from _external import build_parser, run
+
+from _bootstrap import REPO_ROOT  # noqa: F401  (puts backend/ on sys.path)
 
 SOURCE = "codesearchnet"
 

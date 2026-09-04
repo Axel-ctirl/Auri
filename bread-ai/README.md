@@ -213,6 +213,36 @@ runs the same scripts and tails their logs. See
 
 ---
 
+## Making Bread its own model
+
+Everything above treats the LLM as a component you point Bread at. You can also
+bake weights that *are* Bread:
+
+```bash
+python scripts/bake_bread_model.py --dry-run
+python scripts/bake_bread_model.py --mix data/datasets/bread_sft.jsonl
+```
+
+That fine-tunes an open-weight base on `prompts/identity.yaml`, a
+version-controlled corpus defining Bread's identity and answering style, mixed
+with your own coding data. It then merges the adapter into standalone weights:
+
+```
+data/models/bread-coder-7b/
+├── config.json  model-*.safetensors  tokenizer.json
+├── README.md    model card
+└── bread.json   machine-readable provenance
+```
+
+The result loads in anything that reads Transformers weights, answers as Bread,
+and carries a model card naming the base model it derives from. It is still a
+derivative, not a model trained from nothing, and the card says so in the section
+you should not delete before sharing it.
+
+See [docs/MAKING_BREAD_A_MODEL.md](docs/MAKING_BREAD_A_MODEL.md).
+
+---
+
 ## The API
 
 Bread's REST API is how other tools on this machine talk to it: an editor
@@ -249,11 +279,11 @@ bread-ai/
 │   ├── routers/          One module per endpoint group
 │   └── services/         Inference backends, RAG, datasets, training
 ├── backend/alembic/      Migrations, for changes create_all cannot express
-├── backend/tests/        101 pytest tests, no GPU required
+├── backend/tests/        117 pytest tests, no GPU required
 ├── frontend/src/         React + TypeScript interface
 ├── scripts/              Dataset collection, cleaning, training, evaluation
 ├── configs/              Model profiles, training configs, license policy
-├── prompts/              System prompt and eleven task presets
+├── prompts/              System prompt, eleven task presets, identity corpus
 ├── docs/                 Architecture, training, datasets, RAG, security
 └── data/                 Everything Bread stores (gitignored)
 ```

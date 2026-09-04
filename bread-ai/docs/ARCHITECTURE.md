@@ -128,6 +128,22 @@ once rather than failing at the first one.
 Config paths are resolved and required to live under `configs/`, because that
 path becomes `argv` for a subprocess.
 
+## Baking Bread's own weights
+
+`prompts/identity.yaml` is a version-controlled corpus of what Bread says it is
+and how it answers. `scripts/build_identity_dataset.py` turns it into training
+records, mixing in general coding data at a configurable ratio because identity
+data on its own causes catastrophic forgetting.
+
+`scripts/bake_bread_model.py` chains build, validate, train and merge, then
+writes a model card and a `bread.json` provenance file into the merged weights.
+The output is a standalone model directory rather than a base plus an adapter.
+
+Placeholders in the corpus (`{base_model}`, `{base_license}`) are filled by plain
+string replacement rather than `str.format`, because the corpus is full of code
+examples containing literal braces. A test asserts the substitution happened and
+that the braces survived.
+
 ## Database
 
 SQLite through SQLModel, in one file under `data/`. Thirteen tables:
@@ -163,7 +179,7 @@ emits `frontend/dist`, which the backend mounts and serves with an SPA fallback.
 
 ## Testing
 
-101 backend tests and 22 frontend tests. The backend suite runs against a
+117 backend tests and 22 frontend tests. The backend suite runs against a
 temporary SQLite file with the mock backend and the hashing embedder, so it
 needs no GPU, no model weights and no network. It covers the HTTP surface,
 retrieval end to end, the security rules, the dataset pipeline from collection

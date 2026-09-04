@@ -126,6 +126,19 @@ jobs:
           python scripts/dataset_report.py --input data/datasets/ci_sample.clean.jsonl
           python scripts/scan_secrets.py --dataset data/datasets/ci_sample.clean.jsonl
 
+      - name: Build the identity corpus and rehearse the bake
+        # No GPU here, so the bake stops cleanly at the training preflight.
+        # What this proves is that the corpus parses, substitutes and validates.
+        run: |
+          python scripts/build_identity_dataset.py \
+            --output data/datasets/ci_identity.jsonl \
+            --mix data/datasets/ci_sample.clean.jsonl \
+            --mix-ratio 8 \
+            --repeat 1
+          python scripts/validate_dataset.py --input data/datasets/ci_identity.jsonl
+          python scripts/bake_bread_model.py --dry-run --output-name ci-bake || true
+          test ! -d data/models/ci-bake
+
       - name: External collectors refuse without accepted terms
         run: |
           ! python scripts/collect_stack_sample.py

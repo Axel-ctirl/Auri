@@ -16,7 +16,6 @@ import argparse
 from pathlib import Path
 
 from _bootstrap import print_header
-
 from app.services.datasets.collect import SKIP_DIRECTORIES
 from app.services.datasets.records import read_jsonl, record_text
 from app.services.datasets.secrets import scan_text

@@ -24,7 +24,6 @@ import sys
 from pathlib import Path
 
 from _bootstrap import REPO_ROOT, print_header, print_table, resolve_output
-
 from app.services.datasets import (
     DEFAULT_ALLOWED_LICENSES,
     SUPPORTED_LANGUAGES,
