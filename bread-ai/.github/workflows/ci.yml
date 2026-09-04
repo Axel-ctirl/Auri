@@ -144,6 +144,8 @@ jobs:
         # benchmark cannot silently make a model look bad.
         run: |
           python -m pytest backend/tests/test_quality.py -q
+          # The reference checker must be clean on code that is known good.
+          python scripts/check_code.py --file backend/app/services/quality/api_check.py
 
       - name: External collectors refuse without accepted terms
         run: |

@@ -91,6 +91,52 @@ provided. Saying "I do not know" is the passing answer.
 A high English score means well-formed writing. It says nothing about whether
 the content is true, which is why the runner prints the answers. Read them.
 
+## Catching invented APIs without running anything
+
+The characteristic failure of a small coding model is not bad logic. It is
+fluent, well-structured code that calls something which does not exist. Asked
+for a disnake bot, the 1.5B model produced code that used `discord.timedelta`
+in a file that never imported `discord`, and called a keyword-only method
+positionally. Both are deterministic mistakes, and neither needs the code to be
+run to find.
+
+```bash
+python scripts/check_code.py --answer answer.md
+python scripts/check_code.py --file bot.py
+cat answer.md | python scripts/check_code.py
+```
+
+Three checks, in increasing order of what they need to know:
+
+| Check | Finds | Needs |
+| --- | --- | --- |
+| `undefined` | a name used but never imported, assigned or built in | nothing |
+| `attribute` | a module or class lacking the member taken from it | the library installed |
+| `keyword` | a call with a keyword the signature refuses, or too many positional arguments | the library installed |
+
+Findings carry a confidence, and the two are kept apart on purpose. **Certain**
+means provably wrong. **Suspected** means an attribute is missing from a class
+that could still set it at runtime, so it is worth checking rather than worth
+trusting. Only certain findings fail the check and set the exit code, which
+makes the script usable in a pre-commit hook.
+
+Reporting a suspicion as a fact is the same failure the model makes. The
+checker does not do it.
+
+On the disnake answer it found two certain problems and produced no findings at
+all on the corrected version. It does not catch everything: `bot.run(token,
+intents=...)` is wrong, and `Bot.run` accepts `**kwargs`, so no static check can
+prove it. The report says which libraries it inspected and which were not
+installed, so the gaps are visible.
+
+The evaluator runs this over every coding answer, giving a third number
+alongside the pass rate: how many answers referenced something that does not
+exist.
+
+Nothing from the checked code is executed. The libraries it imports are
+imported, so their real signatures can be read. Pass `--no-import` for a purely
+syntactic pass that touches nothing.
+
 ## Running generated code
 
 The coding evaluation executes text a model produced, which is the one thing

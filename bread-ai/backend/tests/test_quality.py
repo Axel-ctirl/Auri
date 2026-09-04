@@ -451,3 +451,220 @@ def test_every_english_task_has_something_to_check():
             key in task
             for key in ("require_prose", "require_any", "require_code", "forbid", "max_words")
         ), f"{task['id']} checks nothing"
+
+
+# ------------------------------------------------------------- api checking
+def test_an_undefined_name_is_caught():
+    from app.services.quality.api_check import check_code
+
+    report = check_code("import datetime\nx = discord.timedelta(minutes=5)\n")
+    assert not report.ok
+    assert report.certain[0].kind == "undefined"
+    assert report.certain[0].symbol == "discord"
+
+
+def test_names_bound_in_every_ordinary_way_are_not_flagged():
+    """The false-positive guard. A checker that cries wolf gets switched off."""
+
+    from app.services.quality.api_check import check_code
+
+    code = """
+import os
+from pathlib import Path as P
+
+TOTAL = 1
+
+def outer(argument, *rest, keyword=None, **extra):
+    local = argument + TOTAL
+    for item in rest:
+        local += item
+    try:
+        pass
+    except ValueError as error:
+        print(error)
+    return [x for x in range(local)], P, os, keyword, extra
+
+class Thing:
+    def method(self):
+        return self
+
+print(outer, Thing, __name__)
+"""
+    assert check_code(code).ok, [f.message for f in check_code(code).findings]
+
+
+def test_a_missing_module_attribute_is_caught():
+    from app.services.quality.api_check import check_code
+
+    report = check_code(
+        "import itertools\nresult = itertools.batched_chunks([1], 2)\n", allow_import=True
+    )
+    assert not report.ok
+    assert any("batched_chunks" in finding.message for finding in report.certain)
+
+
+def test_a_real_module_attribute_is_not_flagged():
+    from app.services.quality.api_check import check_code
+
+    report = check_code(
+        "import itertools\nresult = list(itertools.chain([1], [2]))\n", allow_import=True
+    )
+    assert report.ok, [f.message for f in report.findings]
+
+
+def test_a_bad_keyword_argument_is_caught():
+    from app.services.quality.api_check import check_code
+
+    report = check_code("import os\nos.makedirs('/tmp/x', exist_okay=True)\n", allow_import=True)
+    assert any(finding.kind == "keyword" for finding in report.certain)
+    assert any("exist_okay" in finding.message for finding in report.certain)
+
+
+def test_a_function_taking_kwargs_is_left_alone():
+    """`json.dumps(**kw)` accepts anything, so no keyword can be proven wrong."""
+
+    from app.services.quality.api_check import check_code
+
+    report = check_code("import json\njson.dumps({}, indentation=2)\n", allow_import=True)
+    assert report.ok
+
+
+def test_a_keyword_only_method_called_positionally_is_caught():
+    """The disnake defect: `member.timeout(end_time)` on a keyword-only method."""
+
+    disnake = pytest.importorskip("disnake")
+
+    from app.services.quality.api_check import check_code
+
+    code = (
+        "import disnake\n"
+        "async def go(member: disnake.Member):\n"
+        "    await member.timeout(600)\n"
+    )
+    report = check_code(code, allow_import=True)
+    assert any("positional" in finding.message for finding in report.certain)
+    assert disnake is not None
+
+
+def test_the_same_method_called_correctly_is_not_flagged():
+    pytest.importorskip("disnake")
+
+    from app.services.quality.api_check import check_code
+
+    code = (
+        "import disnake\n"
+        "async def go(member: disnake.Member):\n"
+        "    await member.timeout(duration=600, reason='spam')\n"
+    )
+    assert check_code(code, allow_import=True).ok
+
+
+def test_an_unprovable_attribute_is_reported_as_a_suspicion_not_a_fact():
+    """Confidence levels exist so a suspicion never reads as a certainty."""
+
+    pytest.importorskip("disnake")
+
+    from app.services.quality.api_check import check_code
+
+    code = (
+        "import disnake\n"
+        "async def go(inter: disnake.ApplicationCommandInteraction):\n"
+        "    return inter.message\n"
+    )
+    report = check_code(code, allow_import=True)
+    assert report.ok  # suspicions do not fail the check
+    assert report.likely
+    assert report.likely[0].confidence == "likely"
+    assert "may be set at runtime" in report.likely[0].message
+
+
+def test_syntax_errors_are_reported_rather_than_raised():
+    from app.services.quality.api_check import check_code
+
+    report = check_code("def broken(\n")
+    assert not report.ok
+    assert report.syntax_error and "line" in report.syntax_error
+
+
+def test_nothing_is_imported_unless_asked():
+    from app.services.quality.api_check import check_code
+
+    report = check_code("import itertools\nitertools.nope()\n", allow_import=False)
+    assert report.modules_checked == []
+    assert report.ok  # the syntactic pass alone finds nothing wrong here
+
+
+def test_an_uninstalled_module_is_noted_not_blamed():
+    from app.services.quality.api_check import check_code
+
+    report = check_code(
+        "import definitely_not_installed_xyz\ndefinitely_not_installed_xyz.go()\n",
+        allow_import=True,
+    )
+    assert "definitely_not_installed_xyz" in report.modules_unavailable
+    assert report.ok  # absence of the library is not evidence against the code
+
+
+def test_check_answer_pulls_code_out_of_prose():
+    from app.services.quality.api_check import check_answer
+
+    report = check_answer("Here you go:\n\n```python\nx = undefined_thing\n```\n")
+    assert any(finding.symbol == "undefined_thing" for finding in report.certain)
+
+    empty = check_answer("I cannot help with that.")
+    assert empty.syntax_error == "no code block in the answer"
+
+
+def test_a_name_annotated_two_ways_is_not_guessed_at():
+    """The false positive found by pointing the checker at its own source.
+
+    A visitor class annotates the same parameter name as a different type in
+    every method. Resolving it to whichever came last invented a dozen problems
+    that did not exist.
+    """
+
+    from app.services.quality.api_check import check_code
+
+    code = """
+import ast
+
+class Visitor:
+    def visit_Call(self, node: ast.Call):
+        return node.func
+
+    def visit_Name(self, node: ast.Name):
+        return node.id
+"""
+    report = check_code(code, allow_import=True)
+    assert report.ok
+    assert report.findings == []
+
+
+def test_fields_declared_but_set_on_instances_are_not_flagged():
+    """AST nodes, dataclasses and pydantic models set attributes on instances."""
+
+    from app.services.quality.api_check import check_code
+
+    code = "import ast\ndef go(call: ast.Call):\n    return call.func, call.args, call.keywords\n"
+    assert check_code(code, allow_import=True).ok
+
+
+def test_relative_imports_are_not_treated_as_top_level_modules():
+    from app.services.quality.api_check import check_code
+
+    report = check_code("from .sibling import helper\nresult = helper()\n", allow_import=True)
+    assert report.modules_unavailable == []
+    assert report.ok
+
+
+def test_the_checker_is_clean_on_its_own_source():
+    """A checker that flags known-good code gets switched off and stops helping."""
+
+    from app.services.quality.api_check import check_code
+
+    source = (REPO_ROOT / "backend" / "app" / "services" / "quality" / "api_check.py").read_text(
+        encoding="utf-8"
+    )
+    report = check_code(source, allow_import=True)
+    assert report.ok, [f.message for f in report.certain]
+    assert not report.likely, [f.message for f in report.likely]

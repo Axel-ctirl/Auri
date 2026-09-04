@@ -232,6 +232,16 @@ code extracted and run in a subprocess. English is scored against a rubric that
 measures form and catches confabulation, including three tasks where the right
 answer is "I do not know".
 
+A third check catches invented APIs without running anything:
+
+```bash
+python scripts/check_code.py --answer answer.md
+```
+
+It resolves every name, module attribute and call signature against the
+libraries installed on your machine, and separates what it can prove from what
+it merely suspects.
+
 See [docs/QUALITY.md](docs/QUALITY.md).
 
 ---
@@ -338,7 +348,7 @@ bread-ai/
 │   ├── routers/          One module per endpoint group
 │   └── services/         Inference backends, RAG, datasets, training
 ├── backend/alembic/      Migrations, for changes create_all cannot express
-├── backend/tests/        175 pytest tests, no GPU required
+├── backend/tests/        192 pytest tests, no GPU required
 ├── frontend/src/         React + TypeScript interface
 ├── scripts/              Dataset collection, cleaning, training, evaluation
 ├── configs/              Model profiles, training and pretraining configs

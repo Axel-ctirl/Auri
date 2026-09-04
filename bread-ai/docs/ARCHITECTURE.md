@@ -196,7 +196,7 @@ emits `frontend/dist`, which the backend mounts and serves with an SPA fallback.
 
 ## Testing
 
-175 backend tests and 22 frontend tests. The pretraining tests need PyTorch
+192 backend tests and 22 frontend tests. The pretraining tests need PyTorch
 and skip cleanly without it. The rest run against a
 temporary SQLite file with the mock backend and the hashing embedder, so it
 needs no GPU, no model weights and no network. It covers the HTTP surface,

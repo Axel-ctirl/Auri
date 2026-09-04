@@ -36,6 +36,7 @@ from typing import Any
 import yaml
 
 from _bootstrap import REPO_ROOT, print_header, print_table
+from app.services.quality.api_check import check_answer
 from app.services.quality.coding_eval import evaluate_answers
 from app.services.quality.prose_eval import evaluate_prose
 
@@ -224,6 +225,42 @@ def main(argv: list[str] | None = None) -> int:
                         print(
                             f"    {failure.task_id:<22} {failure.reason:<10} {failure.detail[:70]}"
                         )
+
+    # --------------------------------------------------- invented API check
+    # Runs on every answer, whether or not the code was executed, because it
+    # needs neither a test nor permission to run anything.
+    api_findings: dict[str, list[dict[str, Any]]] = {}
+    for task in coding_tasks:
+        task_id = str(task["id"])
+        answer = answers.get(task_id, "")
+        if not answer.strip():
+            continue
+        api_report = check_answer(answer, allow_import=True)
+        problems = [finding.as_dict() for finding in api_report.certain]
+        if problems:
+            api_findings[task_id] = problems
+
+    if coding_tasks:
+        api_summary = {
+            "answers_with_invented_apis": len(api_findings),
+            "answers_checked": sum(
+                1 for task in coding_tasks if answers.get(str(task["id"]), "").strip()
+            ),
+            "findings": api_findings,
+        }
+        report["api_check"] = api_summary
+
+        if not args.as_json:
+            print_header("References: does every name and signature resolve")
+            print_table(
+                {
+                    "answers checked": api_summary["answers_checked"],
+                    "answers with a broken reference": len(api_findings),
+                }
+            )
+            for task_id, problems in api_findings.items():
+                for problem in problems[:3]:
+                    print(f"    {task_id:<22} {problem['message'][:78]}")
 
     # ------------------------------------------------------------ english
     if english_tasks:
