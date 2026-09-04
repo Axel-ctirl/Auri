@@ -135,6 +135,14 @@ class Settings(BaseSettings):
     chunk_size: int = Field(default=900, alias="RAG_CHUNK_SIZE")
     chunk_overlap: int = Field(default=150, alias="RAG_CHUNK_OVERLAP")
 
+    # ---------------------------------------------------------------- memory
+    memory_enabled: bool = Field(default=True, alias="MEMORY_ENABLED")
+    memory_recall_limit: int = Field(default=8, alias="MEMORY_RECALL_LIMIT")
+    # Checking a reply's Python for invented APIs costs one extra generation per
+    # problem found, so it is opt-in per request rather than always on.
+    verify_code_default: bool = Field(default=False, alias="VERIFY_CODE_DEFAULT")
+    verify_code_attempts: int = Field(default=3, alias="VERIFY_CODE_ATTEMPTS")
+
     # -------------------------------------------------------------- training
     training_output_dir: str = Field(default="runs", alias="TRAINING_OUTPUT_DIR")
     datasets_dir: str = Field(default="datasets", alias="DATASETS_DIR")

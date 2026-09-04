@@ -11,6 +11,7 @@ from ..config import Settings
 from ..errors import NotFoundError
 from ..models import Conversation, KnowledgeSpace, Message, utcnow
 from ..schemas import ChatRequest
+from . import memory as memory_service
 from .inference.base import ChatTurn, GenerationParams, InferenceBackend
 from .prompts import compose_system_prompt
 from .rag import ingest
@@ -129,8 +130,29 @@ def build_turns(
 ) -> list[ChatTurn]:
     """Build the full prompt: system message, history, retrieved context, question."""
 
+    turns, _memory = build_turns_with_memory(
+        session, settings, conversation, request, citations, backend
+    )
+    return turns
+
+
+def build_turns_with_memory(
+    session: Session,
+    settings: Settings,
+    conversation: Conversation,
+    request: ChatRequest,
+    citations: list[dict[str, Any]],
+    backend: InferenceBackend,
+) -> tuple[list[ChatTurn], list[str]]:
+    """``build_turns``, and what memory contributed, so a caller can report it.
+
+    Recall has a side effect: it counts a use. Returning the entries from the one
+    call that already happened keeps a caller from recalling twice to find out.
+    """
+
     base_system = request.system_prompt or conversation.system_prompt or settings.system_prompt()
     system_prompt = compose_system_prompt(base_system, request.preset)
+    system_prompt, memory_used = _with_memory(session, settings, request, system_prompt)
 
     turns: list[ChatTurn] = [ChatTurn(role="system", content=system_prompt)]
 
@@ -149,7 +171,28 @@ def build_turns(
         user_content = f"{context_block}\n\n---\n\nQuestion: {request.message}"
 
     turns.append(ChatTurn(role="user", content=user_content))
-    return _trim_to_context(turns, backend, settings, request)
+    return _trim_to_context(turns, backend, settings, request), memory_used
+
+
+def _with_memory(
+    session: Session,
+    settings: Settings,
+    request: ChatRequest,
+    system_prompt: str,
+) -> tuple[str, list[str]]:
+    """Append remembered context to the system prompt when memory is on."""
+
+    use_memory = request.use_memory if request.use_memory is not None else settings.memory_enabled
+    if not use_memory:
+        return system_prompt, []
+    prompt, entries = memory_service.augment_system_prompt(
+        session,
+        system_prompt,
+        request.message,
+        project=request.project_path,
+        limit=settings.memory_recall_limit,
+    )
+    return prompt, [entry.content for entry in entries]
 
 
 def _trim_to_context(

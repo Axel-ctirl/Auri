@@ -141,6 +141,60 @@ llama.cpp, an OpenAI-compatible local server, and the mock backend.
 
 ---
 
+## The command line
+
+The browser is one way in. `bread` is the other, and it talks to the same code,
+so a model loaded in one behaves identically in the other.
+
+```bash
+./bread                              # the banner and what you can do
+./bread ask "why does this leak?"    # one question, answered and checked
+./bread chat                         # an interactive session
+./bread check src/handler.py         # find invented APIs without running anything
+./bread doctor                       # what is installed, what is missing
+./bread serve                        # start the API and the web interface
+```
+
+On Windows use `bread.cmd`. Put the repository directory on your `PATH` and
+`bread` works from any project.
+
+`ask` and `chat` verify the Python they produce before showing it to you: every
+name, attribute and call signature is resolved against the libraries actually
+installed on your machine, and anything provably wrong is handed back to the
+model to correct. Nothing is executed to do this. See
+[docs/CLI.md](docs/CLI.md).
+
+---
+
+## What Bread remembers
+
+A conversation ends and its context goes with it. The useful residue does not.
+
+```bash
+./bread memory add "This project pins disnake 2.12.1" --project .
+./bread memory add "Answers stay short" --kind preference --pin
+./bread memory list
+./bread memory forget 3cdcf0dd
+```
+
+Entries are plain rows in the same local SQLite file, readable and deletable by
+hand. Nothing is inferred behind your back: an entry exists because you asked
+for it, or because you said yes when a repaired mistake offered to be
+remembered.
+
+Memory is scoped. A `--project` entry only reaches prompts for that directory,
+so a Minecraft plugin's conventions stay out of a Discord bot's answers. The
+directory itself is stored as a hash with a readable name prefix, so a memory
+listing does not expose your folder layout.
+
+Only a handful of entries reach any one prompt, ranked by overlap with the
+question, with pinned entries always included. Memory that grows without limit
+becomes a context-window tax that makes every answer worse.
+
+Set `MEMORY_ENABLED=false` to switch it off entirely.
+
+---
+
 ## Retrieval over your own documents
 
 Upload code, notes or PDFs into a **knowledge space**, and Bread cites them when
@@ -242,7 +296,9 @@ It resolves every name, module attribute and call signature against the
 libraries installed on your machine, and separates what it can prove from what
 it merely suspects.
 
-See [docs/QUALITY.md](docs/QUALITY.md).
+Bread also repairs what the checker finds: a provable problem is handed back to
+the model and corrected before the answer reaches you, with the cleanest attempt
+kept rather than the last. See [docs/QUALITY.md](docs/QUALITY.md).
 
 ---
 
@@ -344,15 +400,17 @@ Bread never executes code it generated and never executes code you uploaded.
 
 ```
 bread-ai/
+├── bread, bread.cmd      The command line, no install needed
 ├── backend/app/          FastAPI application
 │   ├── routers/          One module per endpoint group
 │   └── services/         Inference backends, RAG, datasets, training
 ├── backend/alembic/      Migrations, for changes create_all cannot express
-├── backend/tests/        192 pytest tests, no GPU required
+├── backend/tests/        244 pytest tests, no GPU required
 ├── frontend/src/         React + TypeScript interface
 ├── scripts/              Dataset collection, cleaning, training, evaluation
 ├── configs/              Model profiles, training and pretraining configs
-├── prompts/              System prompt, eleven task presets, identity corpus
+├── prompts/              System prompt, eleven task presets, identity corpus,
+│                         the wordmark the CLI prints
 ├── docs/                 Architecture, training, datasets, RAG, security
 └── data/                 Everything Bread stores (gitignored)
 ```

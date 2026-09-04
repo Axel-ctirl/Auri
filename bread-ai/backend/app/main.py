@@ -33,6 +33,7 @@ from .routers import (
     datasets,
     documents,
     knowledge,
+    memory,
     models,
     prompts,
     system,
@@ -138,6 +139,7 @@ def create_app() -> FastAPI:
         apikeys.router,
         audit.router,
         prompts.router,
+        memory.router,
     ):
         protected.include_router(router)
 

@@ -137,6 +137,41 @@ Nothing from the checked code is executed. The libraries it imports are
 imported, so their real signatures can be read. Pass `--no-import` for a purely
 syntactic pass that touches nothing.
 
+## Repairing what the checker finds
+
+A model that invents an API does not know it did, and will correct the mistake
+when shown it. That makes the failure recoverable rather than fatal, so Bread
+closes the loop: generate, check, hand the provable problems back, generate
+again.
+
+```bash
+bread ask "Write a disnake cog that times a member out"
+bread ask "..." --attempts 5 --remember-fixes
+```
+
+The same loop runs behind `POST /api/chat` when a request sets
+`"verify_code": true`, and the response reports how many attempts it took.
+
+Two rules keep the loop from doing harm.
+
+**Only certain findings are fed back.** A suspicion is shown to you and never
+sent to the model, because asking it to fix a guess invites it to break working
+code. This is the same distinction the checker draws, carried through to the
+repair.
+
+**The cleanest attempt wins, not the last.** A repair that introduces more
+problems than it fixes is discarded and the earlier answer is what you get.
+Without that rule, a model that misreads the correction makes the answer worse
+with every round.
+
+The loop stops early when an answer is clean, when it contains no code at all, or
+at the attempt budget. Each round costs one generation, which is why the HTTP API
+leaves it off by default while the CLI turns it on.
+
+`--remember-fixes` writes the corrections into memory as `correction` entries, so
+the same invented API is not offered to you a second time. See
+[CLI.md](CLI.md).
+
 ## Running generated code
 
 The coding evaluation executes text a model produced, which is the one thing

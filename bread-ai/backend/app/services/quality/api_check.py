@@ -146,7 +146,16 @@ class _Scope(ast.NodeVisitor):
 
     def _bind_function(self, node: Any) -> None:
         self.bound.add(node.name)
-        arguments = node.args
+        self._bind_arguments(node.args)
+        self.generic_visit(node)
+
+    def visit_Lambda(self, node: ast.Lambda) -> None:
+        # `sorted(pairs, key=lambda pair: pair[1])` binds `pair` just as a def
+        # would. Missing this made every lambda parameter look undefined.
+        self._bind_arguments(node.args)
+        self.generic_visit(node)
+
+    def _bind_arguments(self, arguments: ast.arguments) -> None:
         for group in (
             arguments.posonlyargs,
             arguments.args,
@@ -161,7 +170,6 @@ class _Scope(ast.NodeVisitor):
             self.bound.add(arguments.vararg.arg)
         if arguments.kwarg:
             self.bound.add(arguments.kwarg.arg)
-        self.generic_visit(node)
 
     def visit_ClassDef(self, node: ast.ClassDef) -> None:
         self.bound.add(node.name)
@@ -201,6 +209,23 @@ class _Scope(ast.NodeVisitor):
     def visit_ExceptHandler(self, node: ast.ExceptHandler) -> None:
         if node.name:
             self.bound.add(node.name)
+        self.generic_visit(node)
+
+    def visit_MatchAs(self, node: ast.MatchAs) -> None:
+        # `case Timeout() as error:` and `case [first, second]:` bind names that
+        # never appear as Name nodes.
+        if node.name:
+            self.bound.add(node.name)
+        self.generic_visit(node)
+
+    def visit_MatchStar(self, node: ast.MatchStar) -> None:
+        if node.name:
+            self.bound.add(node.name)
+        self.generic_visit(node)
+
+    def visit_MatchMapping(self, node: ast.MatchMapping) -> None:
+        if node.rest:
+            self.bound.add(node.rest)
         self.generic_visit(node)
 
     def visit_comprehension(self, node: ast.comprehension) -> None:

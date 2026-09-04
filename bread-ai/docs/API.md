@@ -98,7 +98,7 @@ The stream emits four event types:
 
 ```
 event: meta
-data: {"conversation_id":"…","stream_id":"…","model_id":"…","backend":"…","sources":[…]}
+data: {"conversation_id":"…","stream_id":"…","model_id":"…","backend":"…","sources":[…],"memory_used":[…]}
 
 event: token
 data: {"delta":"partial text"}
@@ -122,6 +122,64 @@ curl -X POST http://127.0.0.1:8000/api/chat/stop \
 ```
 
 Omit both fields to stop everything.
+
+### Memory and verification on a chat turn
+
+Three request fields change what a turn does:
+
+| Field | Effect |
+| --- | --- |
+| `use_memory` | Include remembered context in the system prompt. Defaults to `MEMORY_ENABLED`. |
+| `project_path` | The working directory this turn belongs to. Project-scoped memory for it is recalled alongside global memory. |
+| `verify_code` | Check the Python in the reply for invented APIs and let the model correct itself first. Buffered `/api/chat` only. |
+
+The buffered response reports both back:
+
+```json
+{
+  "content": "…",
+  "memory_used": ["This project pins disnake 2.12.1"],
+  "verification": {
+    "repaired": true,
+    "problems_at_first_attempt": 1,
+    "problems_remaining": 0,
+    "attempts": [{"attempt": 1, "problems": 1, "findings": [...]}, {"attempt": 2, "problems": 0, "findings": []}]
+  }
+}
+```
+
+`verification` is `null` when the check did not run. Verification costs one extra
+generation per repair round, which is why it is opt-in. Nothing in the reply is
+executed to check it.
+
+## Memory
+
+```
+GET    /api/memory              ?scope=&kind=&project_path=&limit=
+POST   /api/memory
+GET    /api/memory/stats
+DELETE /api/memory/{id}
+```
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/memory \
+  -H "Content-Type: application/json" \
+  -d '{"content": "This project pins disnake 2.12.1",
+       "kind": "convention",
+       "scope": "project",
+       "project_path": "/home/you/bots"}'
+```
+
+`kind` is one of `fact`, `preference`, `convention`, `correction`. `scope` is
+`global` or `project`, and a project entry needs a `project_path`. The stored
+`project_key` is a hash with the folder name in front of it, not the path.
+
+Listing with `project_path` returns that project's entries alongside the global
+ones, which is what a prompt in that directory would see. Listing with
+`scope=project` narrows it to that project alone.
+
+Deleting an entry deletes the row. See [CLI.md](CLI.md) for the same operations
+from the command line.
 
 ## Conversations
 

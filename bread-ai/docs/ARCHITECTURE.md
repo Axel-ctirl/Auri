@@ -12,8 +12,9 @@ button and the terminal.
 └───────────────┘   SSE   │                                        │
                           │  routers/    system models chat …      │
 ┌───────────────┐         │  services/   inference rag datasets    │
-│  CLI scripts  │ ──────► │              training prompts gpu      │
-└───────────────┘ import  │                                        │
+│ bread CLI,    │ ──────► │              training prompts memory   │
+│ scripts/      │ import  │              quality gpu               │
+└───────────────┘         │                                        │
                           └───────┬──────────────┬─────────────────┘
                                   │              │
                           ┌───────▼──────┐  ┌────▼─────────────────┐
@@ -69,9 +70,9 @@ POST /api/chat/stream
                                       real ones must be loaded explicitly
   → chat_service.resolve_conversation()
   → chat_service.retrieve_context()   embed the question, search the space
-  → chat_service.build_turns()        system prompt + preset + history
-                                      + retrieved context + question,
-                                      trimmed to the context window
+  → chat_service.build_turns()        system prompt + preset + memory
+                                      + history + retrieved context
+                                      + question, trimmed to the window
   → backend.stream()                  yields deltas
   → SSE: meta → token* → done
   → persist the assistant message with its citations
@@ -83,6 +84,16 @@ meaning what the caller asked.
 
 The streaming generator finishes after the request-scoped session may already be
 closed, so it opens its own session to write the assistant message.
+
+Recall has a side effect: it counts a use, which is what `memory stats` ranks by.
+So `build_turns_with_memory()` returns the entries it recalled rather than
+letting a caller recall them a second time to find out what they were.
+
+The buffered `POST /api/chat` can also route generation through
+`quality/repair.py`, which generates, checks the answer's Python against the
+installed libraries, feeds provable problems back, and keeps the cleanest
+attempt. The streaming endpoint cannot: a repair is only knowable after a whole
+answer exists, and tokens already sent cannot be taken back.
 
 ## Retrieval
 
@@ -163,10 +174,11 @@ that the braces survived.
 
 ## Database
 
-SQLite through SQLModel, in one file under `data/`. Thirteen tables:
+SQLite through SQLModel, in one file under `data/`. Fourteen tables:
 `local_profiles`, `conversations`, `messages`, `settings`, `models`,
 `knowledge_spaces`, `documents`, `document_chunks`, `dataset_runs`,
-`training_runs`, `training_checkpoints`, `api_keys`, `audit_logs`.
+`training_runs`, `training_checkpoints`, `api_keys`, `audit_logs`,
+`memory_entries`.
 
 `init_db()` is idempotent: it creates tables, seeds the built-in model catalogue
 and a default knowledge space, then adds any nullable column a newer Bread
@@ -196,7 +208,7 @@ emits `frontend/dist`, which the backend mounts and serves with an SPA fallback.
 
 ## Testing
 
-192 backend tests and 22 frontend tests. The pretraining tests need PyTorch
+244 backend tests and 22 frontend tests. The pretraining tests need PyTorch
 and skip cleanly without it. The rest run against a
 temporary SQLite file with the mock backend and the hashing embedder, so it
 needs no GPU, no model weights and no network. It covers the HTTP surface,

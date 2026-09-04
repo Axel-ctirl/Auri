@@ -31,6 +31,7 @@ from ..schemas import (
 )
 from ..services import chat_service
 from ..services.inference import registry
+from ..services.quality import repair
 
 router = APIRouter(tags=["chat"])
 
@@ -56,15 +57,33 @@ def chat(
     conversation = chat_service.resolve_conversation(session, request)
     citations = chat_service.retrieve_context(session, settings, conversation, request)
     params = chat_service.resolve_generation_params(settings, conversation, request)
-    turns = chat_service.build_turns(session, settings, conversation, request, citations, backend)
+    turns, memory_used = chat_service.build_turns_with_memory(
+        session, settings, conversation, request, citations, backend
+    )
 
     if request.persist:
         chat_service.persist_user_message(session, conversation, request.message)
 
+    verify = (
+        request.verify_code if request.verify_code is not None else settings.verify_code_default
+    )
     stream_id, stop_signal = registry.register_stream(conversation.id)
     started = time.perf_counter()
+    verification: dict | None = None
     try:
-        content = backend.generate(turns, params, stop_signal)
+        if verify:
+            # Static checking only. Nothing in the reply is executed.
+            result = repair.generate_verified(
+                backend,
+                turns,
+                params,
+                stop_signal=stop_signal,
+                max_attempts=settings.verify_code_attempts,
+            )
+            content = result.answer
+            verification = result.as_dict()
+        else:
+            content = backend.generate(turns, params, stop_signal)
     finally:
         registry.release_stream(stream_id)
 
@@ -97,6 +116,8 @@ def chat(
         completion_tokens=backend.count_tokens(content),
         latency_ms=latency_ms,
         stopped_early=stop_signal.stopped,
+        memory_used=memory_used,
+        verification=verification,
     )
 
 
@@ -110,7 +131,9 @@ def chat_stream(
     conversation = chat_service.resolve_conversation(session, request)
     citations = chat_service.retrieve_context(session, settings, conversation, request)
     params = chat_service.resolve_generation_params(settings, conversation, request)
-    turns = chat_service.build_turns(session, settings, conversation, request, citations, backend)
+    turns, memory_used = chat_service.build_turns_with_memory(
+        session, settings, conversation, request, citations, backend
+    )
 
     if request.persist:
         chat_service.persist_user_message(session, conversation, request.message)
@@ -130,6 +153,9 @@ def chat_stream(
                 "model_id": model_id,
                 "backend": status.backend,
                 "sources": citations,
+                # Reported so a client can show what memory contributed rather
+                # than leaving it to silently steer the answer.
+                "memory_used": memory_used,
             },
         )
 

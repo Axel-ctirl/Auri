@@ -167,6 +167,21 @@ class ChatRequest(BaseModel):
     preset: str | None = Field(
         default=None, description="Name of a prompt preset under prompts/presets/."
     )
+    use_memory: bool | None = Field(
+        default=None,
+        description="Include remembered context in the system prompt. Defaults to the "
+        "MEMORY_ENABLED setting.",
+    )
+    project_path: str | None = Field(
+        default=None,
+        description="Working directory this turn belongs to. Project-scoped memory for "
+        "this directory is recalled alongside global memory.",
+    )
+    verify_code: bool | None = Field(
+        default=None,
+        description="Check any Python the reply contains for invented APIs and let the "
+        "model correct itself before answering. Buffered chat only; nothing is executed.",
+    )
     persist: bool = True
 
 
@@ -194,6 +209,56 @@ class ChatResponse(BaseModel):
     completion_tokens: int | None = None
     latency_ms: int = 0
     stopped_early: bool = False
+    memory_used: list[str] = Field(
+        default_factory=list,
+        description="Remembered entries that were put in front of the model this turn.",
+    )
+    verification: dict | None = Field(
+        default=None,
+        description="Result of the code check when verify_code was on: how many attempts "
+        "it took and what remained unresolved.",
+    )
+
+
+# ----------------------------------------------------------------- memory
+class MemoryEntryOut(BaseModel):
+    id: str
+    content: str
+    kind: str
+    scope: str
+    project_key: str | None = None
+    source: str
+    pinned: bool = False
+    use_count: int = 0
+    last_used_at: datetime | None = None
+    created_at: datetime
+
+
+class MemoryCreateRequest(BaseModel):
+    content: str = Field(min_length=1, max_length=600)
+    kind: Literal["fact", "preference", "convention", "correction"] = "fact"
+    scope: Literal["global", "project"] = "global"
+    project_path: str | None = Field(
+        default=None,
+        description="Required when scope is 'project'. The directory the entry applies to.",
+    )
+    pinned: bool = Field(
+        default=False, description="Always include this entry, regardless of relevance."
+    )
+
+
+class MemoryStats(BaseModel):
+    enabled: bool
+    total: int
+    pinned: int
+    by_kind: dict[str, int] = Field(default_factory=dict)
+    by_scope: dict[str, int] = Field(default_factory=dict)
+    most_used: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class MemoryDeleteResponse(BaseModel):
+    forgotten: bool
+    id: str
 
 
 class ChatStopRequest(BaseModel):

@@ -6,7 +6,7 @@
 .DEFAULT_GOAL := help
 .PHONY: help install install-dev install-inference install-train serve dev \
         frontend build test test-backend test-frontend lint format typecheck \
-        check status clean clean-data
+        check status doctor memory clean clean-data
 
 PYTHON ?= python
 
@@ -61,6 +61,12 @@ check: lint typecheck test  ## Everything CI runs
 
 status:  ## Print GPU, dependency and configuration status
 	cd backend && $(PYTHON) -m app.cli status
+
+doctor:  ## Report what is installed, what is missing, and what to do about it
+	./bread doctor
+
+memory:  ## List what Bread remembers
+	./bread memory list
 
 clean:  ## Remove build artefacts and caches
 	rm -rf frontend/dist .pytest_cache .mypy_cache .ruff_cache htmlcov .coverage

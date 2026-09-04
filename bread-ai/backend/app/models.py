@@ -216,6 +216,36 @@ class ApiKey(SQLModel, table=True):
     created_at: datetime = Field(default_factory=utcnow)
 
 
+class MemoryEntry(SQLModel, table=True):
+    """Something Bread should remember between conversations.
+
+    Conversations are transient. A convention you corrected once, a library
+    version you are pinned to, the fact that a project uses tabs, all of that is
+    worth carrying forward. Memory is that carry-forward, and it is local, plain
+    text, and editable by hand.
+
+    Scope keeps a Minecraft plugin's conventions out of a Discord bot's answers:
+    ``global`` applies everywhere, ``project`` only when working in that
+    directory.
+    """
+
+    __tablename__ = "memory_entries"
+    __table_args__ = (Index("ix_memory_scope_project", "scope", "project_key"),)
+
+    id: str = Field(default_factory=new_id, primary_key=True)
+    content: str = Field(default="", sa_column=Column(Text))
+    kind: str = Field(default="fact", index=True)  # fact|preference|convention|correction
+    scope: str = Field(default="global", index=True)  # global|project
+    project_key: str | None = Field(default=None, index=True)
+    source: str = Field(default="manual")  # manual|correction|imported
+    # Pinned entries are always injected, regardless of relevance ranking.
+    pinned: bool = Field(default=False)
+    use_count: int = Field(default=0)
+    last_used_at: datetime | None = Field(default=None)
+    created_at: datetime = Field(default_factory=utcnow, index=True)
+    updated_at: datetime = Field(default_factory=utcnow)
+
+
 class AuditLog(SQLModel, table=True):
     __tablename__ = "audit_logs"
 

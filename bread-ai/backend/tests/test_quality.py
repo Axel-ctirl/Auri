@@ -668,3 +668,44 @@ def test_the_checker_is_clean_on_its_own_source():
     report = check_code(source, allow_import=True)
     assert report.ok, [f.message for f in report.certain]
     assert not report.likely, [f.message for f in report.likely]
+
+
+def test_lambda_parameters_are_bound():
+    """A lambda's parameter is defined inside it, the same as a def's."""
+
+    from app.services.quality.api_check import check_code
+
+    report = check_code("pairs = [(1, 2)]\nordered = sorted(pairs, key=lambda pair: pair[1])\n")
+    assert report.ok, [f.message for f in report.certain]
+
+
+def test_names_bound_by_a_match_statement_are_not_flagged():
+    from app.services.quality.api_check import check_code
+
+    source = """
+def describe(value):
+    match value:
+        case [first, *rest]:
+            return first, rest
+        case {"kind": kind, **extra}:
+            return kind, extra
+        case ValueError() as error:
+            return error
+    return None
+"""
+    report = check_code(source)
+    assert report.ok, [f.message for f in report.certain]
+
+
+def test_the_checker_is_clean_on_the_whole_backend():
+    """Every module Bread ships passes its own check, so a finding means something."""
+
+    from app.services.quality.api_check import check_code
+
+    problems: list[str] = []
+    for path in sorted((REPO_ROOT / "backend" / "app").rglob("*.py")):
+        report = check_code(path.read_text(encoding="utf-8"), allow_import=True)
+        problems.extend(
+            f"{path.name}:{finding.line} {finding.message}" for finding in report.certain
+        )
+    assert problems == []

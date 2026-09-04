@@ -85,6 +85,11 @@ not rendered as markup, so a model cannot inject script into the page.
 Read what Bread writes before you run it. That is your job, and Bread will not
 do it for you.
 
+The code checker behind `bread check` and `verify_code` is static: it parses the
+answer and reads signatures from libraries the answer already imports. It never
+runs the code it is checking. `--no-import` narrows it further to a pass that
+imports nothing at all.
+
 ## Path handling on the API
 
 Two endpoints accept a filesystem path from the caller, and both are constrained:
@@ -140,6 +145,13 @@ OpenAI-compatible endpoint you configured.
 
 The `report_to: none` line in every training config keeps the training stack
 from phoning a tracking service.
+
+Memory is part of this. Entries are rows in the same local SQLite file, written
+only when you ask for them, readable with `bread memory list`, and deleted for
+real by `bread memory forget`. Bread does not mine your conversations for things
+to remember. A project-scoped entry stores the directory as a hash with the
+folder name in front of it, so a listing does not print your filesystem layout,
+and `MEMORY_ENABLED=false` switches the whole thing off.
 
 ## Reporting a problem
 

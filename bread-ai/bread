@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# Bread's command line, without installing anything.
+#
+#   ./bread                 the banner and what you can do
+#   ./bread ask "..."       one question
+#   ./bread chat            an interactive session
+#
+# Put this directory on your PATH to run `bread` from any project directory;
+# memory scoped with --project is keyed on the directory you pass, not on where
+# this script lives.
+set -euo pipefail
+here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+python="${BREAD_PYTHON:-}"
+if [ -z "$python" ]; then
+  if [ -x "$here/.venv/bin/python" ]; then python="$here/.venv/bin/python"
+  elif command -v python3 >/dev/null 2>&1; then python="python3"
+  else python="python"; fi
+fi
+export PYTHONPATH="$here/backend${PYTHONPATH:+:$PYTHONPATH}"
+exec "$python" -m app.cli "$@"
