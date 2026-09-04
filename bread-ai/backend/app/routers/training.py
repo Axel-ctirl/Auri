@@ -28,20 +28,27 @@ def list_runs(session: Session = Depends(get_session)) -> list[TrainingRunOut]:
 
 @router.get("/configs", summary="List the training configs that ship with Bread")
 def list_configs() -> list[dict]:
-    config_dir = REPO_ROOT / "configs" / "training"
+    # Fine-tuning configs and from-scratch pretraining configs, in one list.
+    paths = sorted((REPO_ROOT / "configs" / "training").glob("*.yaml"))
+    paths += sorted((REPO_ROOT / "configs" / "pretrain").glob("*.yaml"))
     entries: list[dict] = []
-    for path in sorted(config_dir.glob("*.yaml")):
+    for path in paths:
         try:
             config = training_service.load_config(path)
         except Exception:
             config = {}
+        is_pretrain = path.parent.name == "pretrain"
         entries.append(
             {
                 "path": str(Path(path).relative_to(REPO_ROOT).as_posix()),
                 "name": path.stem,
                 "base_model_id": config.get("base_model_id", ""),
-                "method": config.get("method", "qlora"),
-                "description": config.get("description", ""),
+                "method": "pretrain" if is_pretrain else config.get("method", "qlora"),
+                "description": config.get("description", "")
+                or (
+                    f"Pretrain {config.get('name', path.stem)} from random "
+                    "initialisation. No inherited weights."
+                ),
                 "min_vram_gb": config.get("min_vram_gb"),
             }
         )

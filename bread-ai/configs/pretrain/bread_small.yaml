@@ -1,0 +1,62 @@
+# Bread Small (100M) — pretrained from random initialisation. No inherited weights.
+#
+# A real model. Trained on its full token budget it writes fluent English and short working functions. This is roughly GPT-2-small territory, reached in an afternoon on hardware you own.
+#
+# Measured shape and honest budget
+# --------------------------------
+#   parameters              100,092,672
+#   non-embedding           75,516,672
+#   compute-optimal tokens  2.0 billion   (about 20 per parameter)
+#   corpus needed           roughly 8 GB of text
+#   estimated time          about 4 hours on one RTX 5090
+#
+# The time estimate assumes about 80 effective TFLOPS in bf16, which is a
+# plausible mid-range figure for a 5090 at this model size. Do not trust it:
+# the trainer measures actual tokens per second in the first hundred steps and
+# prints a projected finish from that. Use the measurement, not this comment.
+#
+# The binding constraint is usually data, not compute. If you cannot feed it
+# the corpus above, drop to the next size down rather than undertraining this
+# one. A well-trained small model beats a starved large one at every task.
+
+name: bread-small
+corpus_path: data/pretrain/corpus.bin
+tokenizer_dir: data/pretrain/tokenizer
+output_dir: data/runs/pretrain-bread-small
+
+# ------------------------------------------------------------------ model shape
+vocab_size: 32000
+hidden_size: 768
+intermediate_size: 2048
+num_hidden_layers: 12
+num_attention_heads: 12
+num_key_value_heads: 4
+sequence_length: 1024
+rope_theta: 10000.0
+tie_word_embeddings: true
+
+# --------------------------------------------------------------------- schedule
+max_steps: 8150
+batch_size: 12
+gradient_accumulation_steps: 20
+learning_rate: 4.0e-4
+min_learning_rate: 4.0e-5
+warmup_steps: 400
+weight_decay: 0.1
+beta1: 0.9
+beta2: 0.95
+grad_clip: 1.0
+
+# -------------------------------------------------------------------- execution
+device: auto
+dtype: bfloat16
+compile_model: false        # torch.compile helps, and lengthens the first step
+seed: 20260904
+log_every: 20
+eval_every: 500
+eval_batches: 20
+save_every: 500
+sample_every: 1000
+sample_prompt: "def "
+sample_tokens: 96
+held_out_fraction: 0.005

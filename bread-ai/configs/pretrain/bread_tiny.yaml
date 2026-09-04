@@ -1,0 +1,62 @@
+# Bread Tiny (38M) — pretrained from random initialisation. No inherited weights.
+#
+# The size to run first. It finishes in under an hour and proves the whole pipeline works before you commit days to a larger one. The result writes recognisable code-shaped text and is genuinely useful for short completions in whatever languages you fed it.
+#
+# Measured shape and honest budget
+# --------------------------------
+#   parameters              38,543,872
+#   non-embedding           22,159,872
+#   compute-optimal tokens  771 million   (about 20 per parameter)
+#   corpus needed           roughly 3 GB of text
+#   estimated time          under an hour on one RTX 5090
+#
+# The time estimate assumes about 80 effective TFLOPS in bf16, which is a
+# plausible mid-range figure for a 5090 at this model size. Do not trust it:
+# the trainer measures actual tokens per second in the first hundred steps and
+# prints a projected finish from that. Use the measurement, not this comment.
+#
+# The binding constraint is usually data, not compute. If you cannot feed it
+# the corpus above, drop to the next size down rather than undertraining this
+# one. A well-trained small model beats a starved large one at every task.
+
+name: bread-tiny
+corpus_path: data/pretrain/corpus.bin
+tokenizer_dir: data/pretrain/tokenizer
+output_dir: data/runs/pretrain-bread-tiny
+
+# ------------------------------------------------------------------ model shape
+vocab_size: 32000
+hidden_size: 512
+intermediate_size: 1376
+num_hidden_layers: 8
+num_attention_heads: 8
+num_key_value_heads: 2
+sequence_length: 1024
+rope_theta: 10000.0
+tie_word_embeddings: true
+
+# --------------------------------------------------------------------- schedule
+max_steps: 5900
+batch_size: 16
+gradient_accumulation_steps: 8
+learning_rate: 6.0e-4
+min_learning_rate: 6.0e-5
+warmup_steps: 200
+weight_decay: 0.1
+beta1: 0.9
+beta2: 0.95
+grad_clip: 1.0
+
+# -------------------------------------------------------------------- execution
+device: auto
+dtype: bfloat16
+compile_model: false        # torch.compile helps, and lengthens the first step
+seed: 20260904
+log_every: 20
+eval_every: 500
+eval_batches: 20
+save_every: 500
+sample_every: 1000
+sample_prompt: "def "
+sample_tokens: 96
+held_out_fraction: 0.005

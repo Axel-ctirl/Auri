@@ -103,3 +103,51 @@ def test_preflight_flags_a_missing_dataset(bread_env):
     config = load_config(resolve_config_path("configs/training/qlora_7b.yaml"))
     problems = preflight(config, Path("/definitely/not/here.jsonl"))
     assert any("Dataset file not found" in problem for problem in problems)
+
+
+def test_pretraining_configs_are_listed_alongside_fine_tuning_ones(client):
+    configs = client.get("/api/training/configs").json()
+    names = {config["name"] for config in configs}
+    assert {"bread_tiny", "bread_small", "bread_base", "bread_large"} <= names
+
+    pretrain = next(config for config in configs if config["name"] == "bread_small")
+    assert pretrain["method"] == "pretrain"
+    assert pretrain["path"].startswith("configs/pretrain/")
+    # A from-scratch run has no base model, and saying otherwise would be a lie.
+    assert pretrain["base_model_id"] == ""
+
+
+def test_pretraining_preflight_does_not_demand_a_base_model(client):
+    """A from-scratch run has no base model, so requiring one would be wrong."""
+
+    from app.services.training_service import load_config, preflight, resolve_config_path
+
+    config = load_config(resolve_config_path("configs/pretrain/bread_tiny.yaml"))
+    problems = preflight(config, None, method="pretrain")
+    assert not any("base_model_id" in problem for problem in problems)
+
+
+def test_pretraining_preflight_names_the_missing_corpus(client):
+    from pathlib import Path
+
+    from app.services.training_service import load_config, preflight, resolve_config_path
+
+    config = load_config(resolve_config_path("configs/pretrain/bread_tiny.yaml"))
+    problems = preflight(config, Path("/definitely/not/here.bin"), method="pretrain")
+    assert any("Packed corpus not found" in problem for problem in problems)
+
+
+def test_starting_a_pretraining_dry_run_reports_the_missing_corpus(client):
+    run = client.post(
+        "/api/training/start",
+        json={
+            "name": "scratch dry run",
+            "config_path": "configs/pretrain/bread_tiny.yaml",
+            "method": "pretrain",
+            "dry_run": True,
+        },
+    ).json()
+
+    assert run["method"] == "pretrain"
+    assert run["base_model_id"] == ""
+    assert run["pid"] is None

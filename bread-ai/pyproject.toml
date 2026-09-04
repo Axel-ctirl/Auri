@@ -23,7 +23,8 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 "backend/tests/*" = ["S101"]
 "scripts/*" = ["T201"]                    # scripts print on purpose
-"scripts/train_tiny_scratch.py" = ["N812"]  # `functional as F` is universal in PyTorch code
+"scripts/train_tiny_scratch.py" = ["N812"]              # `functional as F` is universal
+"backend/app/services/pretrain/model.py" = ["N812"]    # same convention
 
 [tool.ruff.lint.isort]
 # _bootstrap is what puts backend/ on sys.path, so it has to be imported before

@@ -13,6 +13,10 @@
 
 trl>=0.9.6
 datasets>=2.20.0
+
+# Training a tokenizer for a from-scratch pretraining run. Small and pure-Rust,
+# with no CUDA involvement.
+tokenizers>=0.19.0
 evaluate>=0.4.2
 scipy>=1.13.0
 

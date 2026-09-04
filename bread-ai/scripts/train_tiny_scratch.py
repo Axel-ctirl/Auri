@@ -3,6 +3,15 @@
 
     python scripts/train_tiny_scratch.py --config configs/training/tiny_scratch.yaml
 
+Superseded
+----------
+Bread now has a real pretraining stack: ``scripts/pretrain_bread.py`` trains a
+proper model with a learned BPE tokenizer, rotary embeddings and grouped-query
+attention, and exports weights that load anywhere. Use that instead unless you
+specifically want the smallest possible illustration of the mechanics.
+
+    python scripts/pretrain_bread.py --config configs/pretrain/bread_tiny.yaml
+
 Read this first
 ---------------
 This trains a few-million-parameter model on a few megabytes of your own plain

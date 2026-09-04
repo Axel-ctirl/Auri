@@ -61,9 +61,10 @@ export default function Training() {
       <header className="mb-5">
         <h1 className="text-lg font-semibold text-ink-100">Training</h1>
         <p className="mt-1 text-sm text-ink-400">
-          LoRA and QLoRA adapt an existing open-weight model to your code and your style. They do
-          not train a model from scratch, and one consumer GPU cannot: a frontier model takes
-          thousands of accelerators for weeks.
+          Two paths. LoRA and QLoRA adapt an existing open-weight model to your code and your
+          style, which is the fastest route to a strong assistant. Pretraining builds a model from
+          random initialisation with nothing inherited, which is slower and smaller and entirely
+          yours. Neither produces a frontier model on one GPU.
         </p>
       </header>
 
@@ -134,16 +135,31 @@ export default function Training() {
 
         <div>
           <label className="label" htmlFor="run-dataset">
-            Dataset (.jsonl)
+            {selectedConfig?.method === "pretrain"
+              ? "Packed corpus (.bin)"
+              : "Dataset (.jsonl)"}
           </label>
           <input
             id="run-dataset"
             className="field font-mono text-xs"
             value={datasetPath}
             onChange={(event) => setDatasetPath(event.target.value)}
-            placeholder="data/datasets/bread_sft.jsonl"
+            placeholder={
+              selectedConfig?.method === "pretrain"
+                ? "data/pretrain/corpus.bin"
+                : "data/datasets/bread_sft.jsonl"
+            }
           />
         </div>
+
+        {selectedConfig?.method === "pretrain" && (
+          <InlineNotice tone="info">
+            This trains a model from random initialisation. Nothing is inherited from any other
+            model, and the result is entirely yours. It will be fluent and small, and it will not
+            match a 7B model trained on trillions of tokens. Start with the tiny config to prove
+            your corpus before committing days of GPU time.
+          </InlineNotice>
+        )}
 
         {selectedConfig?.method === "tiny_scratch" && (
           <InlineNotice tone="warning">

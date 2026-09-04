@@ -69,7 +69,14 @@ export default function About() {
           <p>
             Those weights are still a derivative of the base model they started from, and the
             model card generated alongside them says which base, under which license, and what
-            the fine-tune did and did not change. Nothing here trains a model from nothing.
+            the fine-tune did and did not change.
+          </p>
+          <p>
+            Bread can also pretrain a model from random initialisation, with nothing inherited
+            from anyone. On one consumer GPU that means something in the 38M to 650M range,
+            trained over an hour to a week. Such a model is fluent, small and entirely yours, and
+            it does not match a 7B model trained on trillions of tokens. That gap is compute and
+            data rather than technique.
           </p>
           <p className="text-ink-400">
             Run <code className="text-crust-200">scripts/bake_bread_model.py --dry-run</code>{" "}

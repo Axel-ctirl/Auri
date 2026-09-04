@@ -128,6 +128,23 @@ once rather than failing at the first one.
 Config paths are resolved and required to live under `configs/`, because that
 path becomes `argv` for a subprocess.
 
+## Pretraining from scratch
+
+`backend/app/services/pretrain/` holds a complete pretraining stack: the model
+(`model.py`), the tokenizer and packing pipeline (`data.py`), the training loop
+(`train.py`) and the exporter (`export.py`).
+
+The model is a conventional decoder-only transformer with RMSNorm, rotary
+position embeddings, grouped-query attention and SwiGLU. Its module names and
+tensor layout deliberately match `LlamaForCausalLM`, so export is a rename-free
+copy plus a config file and the result loads in any standard tooling. A test
+requires identical logits from both implementations, which is what proves the
+rotary layout and head grouping are right.
+
+Corpora are packed into a flat memory-mapped array of token ids, so training
+reads a corpus larger than RAM by paging in only the windows each batch touches.
+Batches are drawn at uniform random offsets rather than swept in order.
+
 ## Baking Bread's own weights
 
 `prompts/identity.yaml` is a version-controlled corpus of what Bread says it is
@@ -179,7 +196,8 @@ emits `frontend/dist`, which the backend mounts and serves with an SPA fallback.
 
 ## Testing
 
-117 backend tests and 22 frontend tests. The backend suite runs against a
+143 backend tests and 22 frontend tests. The pretraining tests need PyTorch
+and skip cleanly without it. The rest run against a
 temporary SQLite file with the mock backend and the hashing embedder, so it
 needs no GPU, no model weights and no network. It covers the HTTP surface,
 retrieval end to end, the security rules, the dataset pipeline from collection

@@ -32,6 +32,16 @@ METHOD_SCRIPTS = {
     "qlora": "train_qlora.py",
     "lora": "train_qlora.py",
     "tiny_scratch": "train_tiny_scratch.py",
+    "pretrain": "pretrain_bread.py",
+}
+
+# Fine-tuning needs the adapter stack; pretraining from scratch needs none of
+# it, because there is no base model to adapt.
+METHOD_REQUIREMENTS = {
+    "qlora": ("transformers", "peft", "trl", "datasets"),
+    "lora": ("transformers", "peft", "trl", "datasets"),
+    "tiny_scratch": (),
+    "pretrain": ("tokenizers",),
 }
 
 # Emitted by the training scripts as: BREAD_PROGRESS {"step": 10, "loss": 1.23}
@@ -78,15 +88,19 @@ def load_config(path: Path) -> dict[str, Any]:
     return loaded
 
 
-def preflight(config: dict[str, Any], dataset_path: Path | None) -> list[str]:
+def preflight(
+    config: dict[str, Any], dataset_path: Path | None, method: str = "qlora"
+) -> list[str]:
     """Cheap checks that catch the mistakes people actually make."""
 
     problems: list[str] = []
 
     if dataset_path is not None and not dataset_path.exists():
-        problems.append(f"Dataset file not found: {dataset_path}")
+        label = "Packed corpus" if method == "pretrain" else "Dataset file"
+        problems.append(f"{label} not found: {dataset_path}")
 
-    required = ("base_model_id", "output_dir")
+    # A pretraining run has no base model on purpose: that is the whole point.
+    required = ("output_dir",) if method == "pretrain" else ("base_model_id", "output_dir")
     for key in required:
         if not config.get(key):
             problems.append(f"Config is missing '{key}'.")
@@ -109,7 +123,7 @@ def preflight(config: dict[str, Any], dataset_path: Path | None) -> list[str]:
     except ImportError:
         problems.append("PyTorch is not installed, so no training can start.")
 
-    for package in ("transformers", "peft", "trl", "datasets"):
+    for package in METHOD_REQUIREMENTS.get(method, ()):
         try:
             __import__(package)
         except ImportError:
@@ -122,14 +136,20 @@ def start_run(session: Session, settings: Settings, request: Any) -> TrainingRun
     config_path = resolve_config_path(request.config_path)
     config = load_config(config_path)
 
-    dataset_raw = request.dataset_path or config.get("dataset_path", "")
+    # A pretraining config points at a packed token corpus rather than a
+    # JSONL dataset, under a different key.
+    default_dataset_key = "corpus_path" if request.method == "pretrain" else "dataset_path"
+    dataset_raw = request.dataset_path or config.get(default_dataset_key, "")
     dataset_path: Path | None = None
     if dataset_raw:
         candidate = Path(dataset_raw).expanduser()
         dataset_path = candidate if candidate.is_absolute() else (REPO_ROOT / candidate).resolve()
 
-    problems = preflight(config, dataset_path)
-    base_model_id = request.base_model_id or config.get("base_model_id", settings.model_id)
+    problems = preflight(config, dataset_path, request.method)
+    if request.method == "pretrain":
+        base_model_id = ""  # trained from random initialisation
+    else:
+        base_model_id = request.base_model_id or config.get("base_model_id", settings.model_id)
     output_dir = (settings.runs_dir / _slug(request.name)).resolve()
 
     run = TrainingRun(
@@ -183,10 +203,14 @@ def start_run(session: Session, settings: Settings, request: Any) -> TrainingRun
         "--run-id",
         run.id,
     ]
-    if dataset_path:
-        command += ["--dataset", str(dataset_path)]
-    if request.base_model_id:
-        command += ["--base-model-id", request.base_model_id]
+    if request.method == "pretrain":
+        if dataset_path:
+            command += ["--corpus-path", str(dataset_path)]
+    else:
+        if dataset_path:
+            command += ["--dataset", str(dataset_path)]
+        if request.base_model_id:
+            command += ["--base-model-id", request.base_model_id]
 
     environment = os.environ.copy()
     environment["PYTHONUNBUFFERED"] = "1"

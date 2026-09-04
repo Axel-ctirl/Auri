@@ -440,7 +440,7 @@ class TrainingStartRequest(BaseModel):
     )
     dataset_path: str | None = None
     base_model_id: str | None = None
-    method: Literal["qlora", "lora", "tiny_scratch"] = "qlora"
+    method: Literal["qlora", "lora", "tiny_scratch", "pretrain"] = "qlora"
     dry_run: bool = Field(
         default=False,
         description="Validate the config, dataset and GPU without launching a run.",

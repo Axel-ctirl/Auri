@@ -213,6 +213,42 @@ runs the same scripts and tails their logs. See
 
 ---
 
+## Pretraining a model from scratch
+
+If you want weights with no external lineage at all, Bread can pretrain one. No
+base model, nothing inherited, every parameter learned from a corpus you chose.
+
+```bash
+python scripts/prepare_pretrain_data.py --input data/datasets/local_code.jsonl
+python scripts/pretrain_bread.py --config configs/pretrain/bread_small.yaml --dry-run
+python scripts/pretrain_bread.py --config configs/pretrain/bread_small.yaml
+python scripts/export_pretrained.py --run data/runs/pretrain-bread-small \
+  --tokenizer data/pretrain/tokenizer --output data/models/bread-small
+```
+
+What one 5090 can honestly pretrain, with parameter counts measured from the
+shipped configs:
+
+| Config | Parameters | Tokens | Text needed | Time |
+| --- | --- | --- | --- | --- |
+| `bread_tiny` | 38.5M | 0.77B | ~3 GB | under an hour |
+| `bread_small` | 100.1M | 2.0B | ~8 GB | about 4 hours |
+| `bread_base` | 298.6M | 6.0B | ~24 GB | about 1.5 days |
+| `bread_large` | 653.2M | 13.1B | ~52 GB | about 7 days |
+
+These produce fluent, genuinely useful small models that are entirely yours.
+They do not match a 7B model trained on trillions of tokens, and the gap is
+compute and data rather than technique. Data is usually the binding constraint.
+
+The exported model uses the conventional decoder-only architecture, so it loads
+in Transformers, vLLM and anything else with no custom code. A test proves the
+export is faithful by requiring identical logits from Bread's implementation and
+Transformers on the same input.
+
+See [docs/PRETRAINING.md](docs/PRETRAINING.md).
+
+---
+
 ## Making Bread its own model
 
 Everything above treats the LLM as a component you point Bread at. You can also
@@ -279,10 +315,10 @@ bread-ai/
 │   ├── routers/          One module per endpoint group
 │   └── services/         Inference backends, RAG, datasets, training
 ├── backend/alembic/      Migrations, for changes create_all cannot express
-├── backend/tests/        117 pytest tests, no GPU required
+├── backend/tests/        143 pytest tests, no GPU required
 ├── frontend/src/         React + TypeScript interface
 ├── scripts/              Dataset collection, cleaning, training, evaluation
-├── configs/              Model profiles, training configs, license policy
+├── configs/              Model profiles, training and pretraining configs
 ├── prompts/              System prompt, eleven task presets, identity corpus
 ├── docs/                 Architecture, training, datasets, RAG, security
 └── data/                 Everything Bread stores (gitignored)

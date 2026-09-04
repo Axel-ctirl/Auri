@@ -26,7 +26,26 @@ pretrained, and adapting it. That is what QLoRA does, and it is genuinely
 valuable. A 7B coding model fine-tuned on your codebase writes code that fits
 your project in a way the base model does not.
 
-## The tiny from-scratch trainer is a toy
+## What pretraining from scratch does and does not get you
+
+Bread can pretrain a model from random initialisation, and the result is
+genuinely yours with no inherited weights. On one RTX 5090 that means something
+in the 38M to 650M range, trained on 0.8B to 13B tokens, over an hour to a week.
+
+Such a model is fluent in the domains it saw and writes short, idiomatic code.
+It is roughly GPT-2 class. It will invent APIs, lose track of long context and
+fail at multi-step reasoning, and it will not approach a 7B model trained on
+trillions of tokens. That gap is compute and data. It does not close with better
+technique, and the configs are sized so you do not discover this a week in.
+
+The binding constraint is usually data rather than compute. Feeding
+`bread_large` its compute-optimal budget takes about 52 GB of text you are
+willing to train on.
+
+A pretrained model is also a *base* model: it completes text and does not follow
+instructions until you fine-tune it. See [PRETRAINING.md](PRETRAINING.md).
+
+## The old char-level trainer is a toy
 
 `scripts/train_tiny_scratch.py` trains a few-million-parameter character-level
 transformer on a few megabytes of text. It is included because watching a loss
