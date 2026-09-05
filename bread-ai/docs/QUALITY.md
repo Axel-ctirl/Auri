@@ -111,6 +111,7 @@ Three checks, in increasing order of what they need to know:
 | Check | Finds | Needs |
 | --- | --- | --- |
 | `undefined` | a name used but never imported, assigned or built in | nothing |
+| `unused_import` | an import nothing goes on to use, usually a leftover from adapted code | nothing |
 | `attribute` | a module or class lacking the member taken from it | the library installed |
 | `keyword` | a call with a keyword the signature refuses, or too many positional arguments | the library installed |
 
@@ -128,6 +129,11 @@ all on the corrected version. It does not catch everything: `bot.run(token,
 intents=...)` is wrong, and `Bot.run` accepts `**kwargs`, so no static check can
 prove it. The report says which libraries it inspected and which were not
 installed, so the gaps are visible.
+
+An unused import is reported as a suspicion rather than a fact, because a
+module can be imported for its side effects. It earns its place anyway: when a
+model adapts an example rather than writing fresh code, the leftovers it drags
+along show up here first.
 
 The evaluator runs this over every coding answer, giving a third number
 alongside the pass rate: how many answers referenced something that does not

@@ -118,6 +118,10 @@ class _Scope(ast.NodeVisitor):
         self.method_calls: list[tuple[str, str, list[str], int, int]] = []
         # Plain attribute reads on typed names: name, attribute, line
         self.instance_attributes: list[tuple[str, str, int]] = []
+        # local name -> (what to call it in a message, line). Used to report an
+        # import nothing goes on to use.
+        self.import_bindings: dict[str, tuple[str, int]] = {}
+        self.declares_all = False
 
     # ------------------------------------------------------------- bindings
     def visit_Import(self, node: ast.Import) -> None:
@@ -125,6 +129,7 @@ class _Scope(ast.NodeVisitor):
             local = alias.asname or alias.name.split(".")[0]
             self.bound.add(local)
             self.imports[local] = alias.name if alias.asname else alias.name.split(".")[0]
+            self.import_bindings[local] = (alias.name, node.lineno)
         self.generic_visit(node)
 
     def visit_ImportFrom(self, node: ast.ImportFrom) -> None:
@@ -134,6 +139,9 @@ class _Scope(ast.NodeVisitor):
             self.bound.add(local)
             # A relative import (`from .sibling import thing`) has no meaning
             # outside its package, so it is recorded as bound and not checked.
+            if alias.name != "*":
+                label = f"{module}.{alias.name}" if module else alias.name
+                self.import_bindings[local] = (label, node.lineno)
             if module and alias.name != "*" and not node.level:
                 self.from_imports.append((module, alias.name, node.lineno))
         self.generic_visit(node)
@@ -176,6 +184,8 @@ class _Scope(ast.NodeVisitor):
         self.generic_visit(node)
 
     def visit_Assign(self, node: ast.Assign) -> None:
+        if any(isinstance(target, ast.Name) and target.id == "__all__" for target in node.targets):
+            self.declares_all = True
         # `bot = commands.Bot(...)` tells us what `bot` is.
         if (
             len(node.targets) == 1
@@ -316,6 +326,34 @@ def check_code(
                 message=f"`{name}` is used but never imported, assigned or defined",
             )
         )
+
+    # ----------------------------------------------------------- dead imports
+    # An import nothing uses is usually a leftover from code that was adapted
+    # rather than written, and the leftover is a hint that more was carried over
+    # than the author meant to carry.
+    if not scope.declares_all:
+        # A module with `__all__` is a re-export surface, where an unused import
+        # is the point.
+        used = {name for name, _line in scope.reads}
+        used |= {alias for alias, _attr, _line in scope.attributes}
+        for local, (label, line) in sorted(
+            scope.import_bindings.items(), key=lambda item: item[1][1]
+        ):
+            if local in used or local.startswith("_"):
+                continue
+            if label.startswith("__future__."):
+                # A future import changes how the file is compiled. It is never
+                # "used" by name and removing it changes behaviour.
+                continue
+            report.findings.append(
+                Finding(
+                    kind="unused_import",
+                    symbol=label,
+                    line=line,
+                    confidence="likely",
+                    message=f"`{label}` is imported but never used",
+                )
+            )
 
     if not allow_import:
         return report

@@ -709,3 +709,44 @@ def test_the_checker_is_clean_on_the_whole_backend():
             f"{path.name}:{finding.line} {finding.message}" for finding in report.certain
         )
     assert problems == []
+
+
+def test_an_unused_import_is_reported_as_a_suspicion():
+    """A leftover import is a hint that more was copied over than was meant to be."""
+
+    from app.services.quality.api_check import check_code
+
+    report = check_code("import os\nimport random\n\nprint(os.getcwd())\n")
+    assert [finding.symbol for finding in report.likely] == ["random"]
+    # A suspicion, so it never fails the check on its own.
+    assert report.ok
+
+
+def test_a_from_import_nobody_uses_is_reported():
+    from app.services.quality.api_check import check_code
+
+    report = check_code("from collections import defaultdict, deque\n\nqueue = deque()\n")
+    assert [finding.symbol for finding in report.likely] == ["collections.defaultdict"]
+
+
+def test_a_future_import_is_never_unused():
+    from app.services.quality.api_check import check_code
+
+    report = check_code("from __future__ import annotations\n\nvalue: int = 1\n")
+    assert report.likely == []
+
+
+def test_a_module_with_dunder_all_is_a_re_export_surface():
+    from app.services.quality.api_check import check_code
+
+    report = check_code('__all__ = ["deque"]\nfrom collections import deque\n')
+    assert report.likely == []
+
+
+def test_an_import_used_only_as_an_annotation_is_not_flagged():
+    from app.services.quality.api_check import check_code
+
+    report = check_code(
+        "import decimal\n\n\ndef total(value: decimal.Decimal) -> None:\n    pass\n"
+    )
+    assert report.likely == []

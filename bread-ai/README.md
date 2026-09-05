@@ -431,7 +431,7 @@ bread-ai/
 │   ├── routers/          One module per endpoint group
 │   └── services/         Inference backends, RAG, datasets, training
 ├── backend/alembic/      Migrations, for changes create_all cannot express
-├── backend/tests/        293 pytest tests, no GPU required
+├── backend/tests/        299 pytest tests, no GPU required
 ├── frontend/src/         React + TypeScript interface
 ├── scripts/              Dataset collection, cleaning, training, evaluation
 ├── configs/              Model profiles, training and pretraining configs

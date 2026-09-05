@@ -161,9 +161,19 @@ def compose_system_prompt(
         )
         parts.append(
             f"### A worked example\n\n"
-            f"This is `{reference['filename']}`, {provenance}. Follow its shape and its "
-            "precautions. Do not copy it back verbatim when the user asked for something "
-            "else.\n\n"
+            f"This is `{reference['filename']}`, {provenance}. Take from it the wiring: "
+            "how the library is set up, which precautions are taken, and why each one is "
+            "there.\n\n"
+            "It is not a template to fill in. Write the user's program, not a rename of "
+            "this one. In particular:\n\n"
+            "- Do not carry over a handler, a listener or an import the user's request "
+            "does not need. An unused leftover is a bug waiting to be found.\n"
+            "- Do not reuse this docstring, its comments or its variable names. Describe "
+            "what your program actually does.\n"
+            "- Choose the data structure the user's problem needs. Copying this one "
+            "because it is here is how the wrong thing gets stored under the wrong key.\n"
+            "- Make every key, name and lookup agree with each other. Writing under one "
+            "key and reading under another compiles, resolves, and returns nothing.\n\n"
             f"```{reference['language']}\n{reference['code']}\n```"
         )
     return "\n\n".join(parts)
