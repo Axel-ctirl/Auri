@@ -56,3 +56,6 @@ filterwarnings = [
     "ignore::DeprecationWarning",
     "ignore::UserWarning",
 ]
+markers = [
+    "slow: executes generated code in a subprocess against a real library",
+]

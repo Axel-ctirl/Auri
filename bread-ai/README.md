@@ -322,6 +322,11 @@ It resolves every name, module attribute and call signature against the
 libraries installed on your machine, and separates what it can prove from what
 it merely suspects.
 
+Some tasks drive a real library. A test builds a fake interaction and a fake
+member and calls the bot's own handlers, so "does it count warnings per member
+or per server" becomes a number instead of a reading. A task names the library
+it needs and is skipped, not failed, where that library is absent.
+
 Bread also repairs what the checker finds: a provable problem is handed back to
 the model and corrected before the answer reaches you, with the cleanest attempt
 kept rather than the last. See [docs/QUALITY.md](docs/QUALITY.md).
@@ -431,7 +436,7 @@ bread-ai/
 │   ├── routers/          One module per endpoint group
 │   └── services/         Inference backends, RAG, datasets, training
 ├── backend/alembic/      Migrations, for changes create_all cannot express
-├── backend/tests/        299 pytest tests, no GPU required
+├── backend/tests/        307 pytest tests, no GPU required
 ├── frontend/src/         React + TypeScript interface
 ├── scripts/              Dataset collection, cleaning, training, evaluation
 ├── configs/              Model profiles, training and pretraining configs

@@ -1,0 +1,237 @@
+# Executable tasks for code that lives inside a framework.
+#
+# The generic coding tasks measure whether a function computes the right answer.
+# They cannot tell you whether a Discord bot counts warnings per member or per
+# server, and that is the kind of mistake a small model actually makes: the
+# library wiring comes out right and the logic does not.
+#
+# Each test here drives the answer's handlers with fake objects. No network, no
+# token, no Discord. `requires` names the library the test needs; a task whose
+# library is absent is skipped and counted separately, never scored as a pass or
+# a failure.
+#
+# Because a test has to call something, these prompts pin the entry points the
+# way the generic tasks pin a function name. Everything the task is actually
+# measuring is left unsaid.
+
+tasks:
+  - id: disnake_warning_log
+    difficulty: hard
+    requires: [disnake]
+    prompt: |
+      Write a single-file Discord bot with disnake 2.x.
+
+      Define the bot as `bot`, a `commands.InteractionBot`. Add a slash command
+      named `warn` taking a member and a reason, which records a warning against
+      that member in the server the command was used in. Add a slash command
+      named `warning_count` taking a member, which replies with how many
+      warnings that member has in that server.
+
+      A warning belongs to one member in one server. Ordinary chat messages are
+      not warnings.
+    test: |
+      import asyncio
+
+      class Guild:
+          def __init__(self, guild_id):
+              self.id = guild_id
+
+      class Member:
+          def __init__(self, member_id, guild_id, name="member"):
+              self.id = member_id
+              self.guild = Guild(guild_id)
+              self.name = name
+              self.mention = f"<@{member_id}>"
+              self.bot = False
+              self.display_name = name
+
+      class Channel:
+          def __init__(self, channel_id):
+              self.id = channel_id
+
+      class Response:
+          def __init__(self):
+              self.sent = []
+          async def send_message(self, content=None, **kwargs):
+              self.sent.append(str(content))
+          async def defer(self, *args, **kwargs):
+              return None
+
+      class Interaction:
+          def __init__(self, guild_id, channel_id=1):
+              self.guild = Guild(guild_id)
+              self.guild_id = guild_id
+              self.channel_id = channel_id
+              self.channel = Channel(channel_id)
+              self.response = Response()
+              self.author = Member(999, guild_id, "caller")
+          @property
+          def last(self):
+              return self.response.sent[-1] if self.response.sent else ""
+
+      warn = bot.get_slash_command("warn")
+      count = bot.get_slash_command("warning_count")
+      assert warn is not None, "no slash command named 'warn'"
+      assert count is not None, "no slash command named 'warning_count'"
+
+      alice = Member(1, 100, "alice")
+      bob = Member(2, 100, "bob")
+      alice_elsewhere = Member(1, 200, "alice")
+
+      async def exercise():
+          inter = Interaction(100)
+          await warn.callback(inter, alice, "spamming")
+          await warn.callback(Interaction(100), alice, "again")
+          await warn.callback(Interaction(100), bob, "once")
+
+          # Alice has two warnings in this server.
+          asked = Interaction(100)
+          await count.callback(asked, alice)
+          assert "2" in asked.last, f"expected 2 warnings for alice, got: {asked.last}"
+
+          # Bob's warnings are his own.
+          asked = Interaction(100)
+          await count.callback(asked, bob)
+          assert "1" in asked.last, f"expected 1 warning for bob, got: {asked.last}"
+
+          # A different server starts empty.
+          asked = Interaction(200)
+          await count.callback(asked, alice_elsewhere)
+          assert "0" in asked.last or "no" in asked.last.lower(), (
+              f"warnings leaked between servers: {asked.last}"
+          )
+
+          # Chatting is not a warning.
+          listener = globals().get("on_message")
+          if listener is not None:
+              class Message:
+                  def __init__(self):
+                      self.content = "hello everyone"
+                      self.author = alice
+                      self.channel = Channel(1)
+                      self.guild = Guild(100)
+              await listener(Message())
+              asked = Interaction(100)
+              await count.callback(asked, alice)
+              assert "2" in asked.last, (
+                  f"an ordinary message became a warning: {asked.last}"
+              )
+
+      asyncio.run(exercise())
+
+  - id: disnake_random_quote
+    difficulty: medium
+    requires: [disnake]
+    prompt: |
+      Write a single-file Discord bot with disnake 2.x.
+
+      Define the bot as `bot`, a `commands.InteractionBot`, and an async
+      `on_message(message)` listener that records what people say. Add a slash
+      command named `quote` that replies with one of the recorded messages,
+      chosen at random from the channel the command was used in.
+
+      Quote only what was actually said by a person in that channel.
+    test: |
+      import asyncio
+
+      class Channel:
+          def __init__(self, channel_id):
+              self.id = channel_id
+
+      class Author:
+          def __init__(self, is_bot=False):
+              self.bot = is_bot
+              self.id = 7
+              self.name = "someone"
+
+      class Message:
+          def __init__(self, content, channel_id, is_bot=False):
+              self.content = content
+              self.channel = Channel(channel_id)
+              self.author = Author(is_bot)
+              self.guild = Channel(1)
+
+      class Response:
+          def __init__(self):
+              self.sent = []
+          async def send_message(self, content=None, **kwargs):
+              self.sent.append(str(content))
+          async def defer(self, *args, **kwargs):
+              return None
+
+      class Interaction:
+          def __init__(self, channel_id):
+              self.channel_id = channel_id
+              self.channel = Channel(channel_id)
+              self.guild_id = 1
+              self.response = Response()
+          @property
+          def last(self):
+              return self.response.sent[-1] if self.response.sent else ""
+
+      quote = bot.get_slash_command("quote")
+      assert quote is not None, "no slash command named 'quote'"
+
+      async def exercise():
+          for content, channel_id, is_bot in [
+              ("alpha", 10, False),
+              ("beta", 10, False),
+              ("i am a bot", 10, True),
+              ("gamma", 20, False),
+          ]:
+              await on_message(Message(content, channel_id, is_bot))
+
+          for _ in range(12):
+              inter = Interaction(10)
+              await quote.callback(inter)
+              assert "alpha" in inter.last or "beta" in inter.last, (
+                  f"quoted something that was not said in this channel: {inter.last}"
+              )
+              assert "gamma" not in inter.last, "quoted another channel's message"
+              assert "i am a bot" not in inter.last, "quoted a bot"
+
+          # A channel with nothing in it must answer, not raise.
+          empty = Interaction(99)
+          await quote.callback(empty)
+          assert empty.response.sent, "said nothing in an empty channel"
+
+      asyncio.run(exercise())
+
+  - id: fastapi_paginated_listing
+    difficulty: medium
+    requires: [fastapi]
+    prompt: |
+      Write a single-file FastAPI service that stores notes in memory.
+
+      Expose `create_app()` returning the application. `POST /notes` takes a JSON
+      body with `title` and optional `body`, and returns the created note with an
+      `id`. `GET /notes` returns an object with `items`, `total`, `limit` and
+      `offset`, accepting `limit` and `offset` as query parameters.
+      `GET /notes/{id}` returns one note, and 404 when there is none.
+
+      A title must not be empty.
+    test: |
+      from fastapi.testclient import TestClient
+
+      client = TestClient(create_app())
+
+      created = client.post("/notes", json={"title": "first", "body": "hello"})
+      assert created.status_code in (200, 201), created.status_code
+      first_id = created.json()["id"]
+
+      for index in range(2, 6):
+          assert client.post("/notes", json={"title": f"note {index}"}).status_code in (200, 201)
+
+      page = client.get("/notes", params={"limit": 2, "offset": 0}).json()
+      assert page["total"] == 5, page
+      assert len(page["items"]) == 2, page
+      assert page["limit"] == 2 and page["offset"] == 0, page
+
+      second = client.get("/notes", params={"limit": 2, "offset": 2}).json()
+      assert len(second["items"]) == 2, second
+      first_ids = {item["id"] for item in page["items"]}
+      assert not (first_ids & {item["id"] for item in second["items"]}), "pages overlap"
+
+      assert client.get(f"/notes/{first_id}").status_code == 200
+      assert client.get("/notes/999999").status_code == 404
+      assert client.post("/notes", json={"title": ""}).status_code == 422

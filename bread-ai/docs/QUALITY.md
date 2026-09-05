@@ -231,6 +231,47 @@ Bread refuses to do anywhere else. It is fenced in:
 A subprocess is isolation, not a sandbox. A hostile payload still has your
 user's permissions. Evaluate models and task files you trust.
 
+## Measuring code that lives in a framework
+
+The generic tasks measure whether a function computes the right answer. They
+cannot tell you whether a Discord bot counts warnings per member or per server,
+and that is exactly where a small model fails once the wiring is right. Asked
+for a `/warn` and `/warnings` pair, one model produced a bot that stored
+warnings under a member id and read them back under a guild id. Every name
+resolved, every rule passed, and the count was always zero.
+
+`prompts/evals/framework_tasks.yaml` closes that gap. Each test drives the
+answer's own handlers with fake objects: a fake interaction that records what
+was sent, a fake member with a guild, a fake message. No network, no token, no
+Discord.
+
+```bash
+python scripts/eval_bread.py --model-id <model> --run-code
+python scripts/eval_bread.py --model-id <model> --run-code --skip-frameworks
+```
+
+Three things make this honest.
+
+**A task says what it needs.** `requires: [disnake]` means the task is skipped
+where disnake is not installed, and the skip is counted separately rather than
+scored as a pass or a failure.
+
+**The answer is imported, not started.** A whole program ends in
+`if __name__ == "__main__": main()`, and run as a script that guard fires: the
+first attempt failed on a missing Discord token instead of on the code's logic.
+The candidate is renamed before its own guard is reached, and registered under
+the new name so tools that resolve annotations late still find it.
+
+**The subprocess sees the same libraries the checker does.** Full isolation also
+hides the user site-packages, where a pip install without a virtualenv lands, so
+every task needing a third-party library failed with a confusing
+`ModuleNotFoundError` while the requirement check said the library was there.
+The caller's `PYTHONPATH` and working directory are still kept out.
+
+Each task is proved to discriminate: a correct solution passes, and the exact
+mistake the task exists to catch fails with a message naming it. A test that
+cannot fail measures nothing.
+
 ## Using the numbers
 
 Run the evaluation before you fine-tune and after. The comparison is what tells
@@ -250,7 +291,7 @@ watching for, and without this evaluation you would not see it.
 
 ## Adding your own tasks
 
-Both task files are plain YAML under `prompts/evals/`. A coding task needs a
+All three task files are plain YAML under `prompts/evals/`. A coding task needs a
 prompt and a test that checks behaviour rather than implementation. An English
 task needs a prompt and at least one thing to check: `require_prose`,
 `require_code`, `require_any`, `forbid` or `max_words`.

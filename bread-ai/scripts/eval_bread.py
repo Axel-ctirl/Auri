@@ -42,6 +42,7 @@ from app.services.quality.prose_eval import evaluate_prose
 
 CODING_TASKS = REPO_ROOT / "prompts" / "evals" / "coding_tasks.yaml"
 ENGLISH_TASKS = REPO_ROOT / "prompts" / "evals" / "english_tasks.yaml"
+FRAMEWORK_TASKS = REPO_ROOT / "prompts" / "evals" / "framework_tasks.yaml"
 SYSTEM_PROMPT_PATH = REPO_ROOT / "prompts" / "system_default.md"
 
 
@@ -150,12 +151,23 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--json", action="store_true", dest="as_json")
     parser.add_argument("--skip-english", action="store_true")
     parser.add_argument("--skip-coding", action="store_true")
+    parser.add_argument(
+        "--skip-frameworks",
+        action="store_true",
+        help="Leave out the tasks that drive a real library's handlers.",
+    )
     args = parser.parse_args(argv)
 
     if not args.model_id and not args.answers:
         parser.error("give --model-id to generate, or --answers to score existing output")
 
     coding_tasks = [] if args.skip_coding else load_tasks(CODING_TASKS)
+    if not args.skip_coding and not args.skip_frameworks:
+        # Framework tasks are scored the same way, so they join the coding set.
+        # What sets them apart is the test: it drives the answer's own handlers
+        # rather than calling one function, which is the only way to see whether
+        # a bot counts warnings per member or per server.
+        coding_tasks += load_tasks(FRAMEWORK_TASKS)
     english_tasks = [] if args.skip_english else load_tasks(ENGLISH_TASKS)
     all_tasks = coding_tasks + english_tasks
 
@@ -211,12 +223,15 @@ def main(argv: list[str] | None = None) -> int:
 
             if not args.as_json:
                 print_header("Coding: does the generated code actually run")
-                print_table(
-                    {
-                        "passed": f"{card.passed} of {card.total}",
-                        "pass rate": f"{card.pass_rate:.0%}",
-                    }
-                )
+                summary = {
+                    "passed": f"{card.passed} of {card.total}",
+                    "pass rate": f"{card.pass_rate:.0%}",
+                }
+                if card.skipped:
+                    summary["skipped"] = (
+                        f"{len(card.skipped)} (library not installed, not counted either way)"
+                    )
+                print_table(summary)
                 for difficulty, counts in sorted(card.by_difficulty().items()):
                     print(f"  {difficulty:<8} {counts['passed']}/{counts['total']}")
                 if card.failures():
