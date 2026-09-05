@@ -172,6 +172,19 @@ string replacement rather than `str.format`, because the corpus is full of code
 examples containing literal braces. A test asserts the substitution happened and
 that the braces survived.
 
+## Prompt presets
+
+`prompts/presets/*.md` carry per-ecosystem conventions. A `Triggers:` line lists
+the words that select the preset, and `suggest()` scores a question against them,
+weighting a trigger by its word count plus a bonus for appearing early in the
+list. Without that bonus the longest matching word won and a FastAPI question
+landed on the generic REST preset.
+
+A preset may ship `<name>.reference.<ext>` beside it: a worked example appended
+to the prompt. The test suite checks every Python reference with the same checker
+a model answer gets, and executes the Discord and FastAPI ones, so the example
+the model is shown is one that runs.
+
 ## Database
 
 SQLite through SQLModel, in one file under `data/`. Fourteen tables:
@@ -208,7 +221,7 @@ emits `frontend/dist`, which the backend mounts and serves with an SPA fallback.
 
 ## Testing
 
-244 backend tests and 22 frontend tests. The pretraining tests need PyTorch
+293 backend tests and 22 frontend tests. The pretraining tests need PyTorch
 and skip cleanly without it. The rest run against a
 temporary SQLite file with the mock backend and the hashing embedder, so it
 needs no GPU, no model weights and no network. It covers the HTTP surface,

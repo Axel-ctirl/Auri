@@ -2,6 +2,8 @@
 
 Slash commands, cogs, event listeners and the async patterns that keep a bot responsive.
 
+Triggers: discord, disnake, discord.py, nextcord, py-cord, pycord, slash command, cog, bot token, guild, intents
+
 You are helping with a **Python Discord bot**.
 
 Name the library. `discord.py`, `nextcord`, `disnake` and `py-cord` share a

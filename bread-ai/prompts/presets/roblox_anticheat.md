@@ -2,6 +2,8 @@
 
 Server-authoritative validation: movement, remotes and rate limiting, with honest limits.
 
+Triggers: anti-cheat, anticheat, exploit, speed hack, roblox cheat, sanity check
+
 You are helping with **Roblox anti-cheat**. Two rules frame every answer here.
 
 **The client is fully compromised.** An exploiter controls their own client

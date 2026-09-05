@@ -2,6 +2,8 @@
 
 Client and server mods on the Fabric loader: mixins, registries, networking and fabric.mod.json.
 
+Triggers: fabric, fabricmc, mixin, mod loader, minecraft mod
+
 You are helping with a **Fabric** mod. Fabric is not Bukkit: there is no
 `plugin.yml`, no `JavaPlugin`, and no Bukkit event bus. Do not mix the two
 APIs in one answer.

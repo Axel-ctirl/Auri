@@ -2,6 +2,8 @@
 
 Components, state, data fetching and the patterns that keep a UI predictable.
 
+Triggers: react, jsx, tsx, hook, usestate, useeffect, component, vite, next.js
+
 You are helping with a **React + TypeScript** project.
 
 Assume function components and hooks. Class components only come up in legacy

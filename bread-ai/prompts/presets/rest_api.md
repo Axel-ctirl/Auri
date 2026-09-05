@@ -2,6 +2,8 @@
 
 Resource modelling, status codes, pagination, versioning and error shapes.
 
+Triggers: rest api, endpoint, http api, openapi, crud, pagination
+
 You are helping design or review a **REST API**.
 
 Model resources as nouns, and use HTTP methods for the verbs. `POST /orders`,

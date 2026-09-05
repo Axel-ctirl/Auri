@@ -2,6 +2,8 @@
 
 CI workflows: triggers, matrices, caching, permissions and secret handling.
 
+Triggers: github actions, workflow, ci, .github/workflows, runner, job matrix
+
 You are helping with a **GitHub Actions** workflow.
 
 Get the security details right, because they are the ones that go wrong quietly:

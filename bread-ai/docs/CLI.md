@@ -81,6 +81,20 @@ bread ask "..." --attempts 5          # allow more repair rounds
 Prose and code are rendered separately, so code comes out syntax-highlighted and
 copy-pasteable.
 
+## Presets
+
+A question about a Discord bot needs different conventions from a question about
+a Dockerfile. The CLI picks the preset from the question:
+
+```
+$ bread ask "write a disnake bot that records messages"
+preset: discord_bot_python
+```
+
+`--preset NAME` chooses one yourself and `--preset none` turns the choice off.
+`chat` picks per turn, so one session can move from a bot to a Dockerfile. A
+question matching nothing gets no preset.
+
 ## Verifying the code it writes
 
 By default `ask` and `chat` check the Python in an answer before showing it to

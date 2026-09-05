@@ -294,6 +294,12 @@ def check_code(
     scope = _Scope()
     scope.visit(tree)
 
+    # Library wiring the generic checks cannot see: an intent that is not
+    # enabled, a cog nothing loads, a blocking call inside async code.
+    from .frameworks import check_frameworks
+
+    report.findings.extend(check_frameworks(tree))
+
     known = scope.bound | BUILTIN_NAMES | IMPLICIT_NAMES | (extra_names or set())
 
     # ------------------------------------------------------- undefined names
@@ -552,10 +558,15 @@ def check_answer(answer: str, *, allow_import: bool = False) -> ApiReport:
     """Pull the code out of a model's answer and check it."""
 
     from .coding_eval import extract_code
+    from .packaging import check_install_instructions
 
     code = extract_code(answer)
     if not code.strip():
         report = ApiReport()
         report.syntax_error = "no code block in the answer"
         return report
-    return check_code(code, allow_import=allow_import)
+    report = check_code(code, allow_import=allow_import)
+    # Only an answer has install instructions to be inconsistent with, so this
+    # check lives here rather than in `check_code`.
+    report.findings.extend(check_install_instructions(answer, code))
+    return report

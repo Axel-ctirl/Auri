@@ -165,7 +165,9 @@ class ChatRequest(BaseModel):
     knowledge_space_id: str | None = None
     rag_top_k: int | None = Field(default=None, ge=1, le=50)
     preset: str | None = Field(
-        default=None, description="Name of a prompt preset under prompts/presets/."
+        default=None,
+        description="Name of a prompt preset under prompts/presets/, or 'auto' to let "
+        "Bread pick one from the question.",
     )
     use_memory: bool | None = Field(
         default=None,

@@ -195,6 +195,32 @@ Set `MEMORY_ENABLED=false` to switch it off entirely.
 
 ---
 
+## Knowing the ecosystem you are asking about
+
+A small model does not reliably remember that reading Discord message content
+needs a privileged intent, or that a cog has to be loaded to run. Bread ships
+eleven task presets that say so, for Discord bots, Paper plugins, Fabric mods,
+Roblox Luau, anti-cheat, FastAPI, REST APIs, React, Docker and GitHub Actions.
+
+Each preset declares the words that select it, so the CLI applies one without
+being told:
+
+```
+$ bread ask "write a disnake bot that records messages"
+preset: discord_bot_python
+```
+
+Over HTTP, send `"preset": "auto"` to get the same choice, or name one. A
+question that matches nothing gets no preset, because the wrong preset is worse
+than none.
+
+A preset may also ship a worked example beside it, and Bread's test suite runs
+those examples: the Discord one is exercised against `disnake`, the FastAPI one
+serves real requests. An example that stops working fails the build rather than
+quietly teaching the model something wrong.
+
+---
+
 ## Retrieval over your own documents
 
 Upload code, notes or PDFs into a **knowledge space**, and Bread cites them when
@@ -405,12 +431,12 @@ bread-ai/
 │   ├── routers/          One module per endpoint group
 │   └── services/         Inference backends, RAG, datasets, training
 ├── backend/alembic/      Migrations, for changes create_all cannot express
-├── backend/tests/        244 pytest tests, no GPU required
+├── backend/tests/        293 pytest tests, no GPU required
 ├── frontend/src/         React + TypeScript interface
 ├── scripts/              Dataset collection, cleaning, training, evaluation
 ├── configs/              Model profiles, training and pretraining configs
-├── prompts/              System prompt, eleven task presets, identity corpus,
-│                         the wordmark the CLI prints
+├── prompts/              System prompt, eleven task presets with tested
+│                         worked examples, identity corpus, the CLI wordmark
 ├── docs/                 Architecture, training, datasets, RAG, security
 └── data/                 Everything Bread stores (gitignored)
 ```

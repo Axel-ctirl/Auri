@@ -137,6 +137,46 @@ Nothing from the checked code is executed. The libraries it imports are
 imported, so their real signatures can be read. Pass `--no-import` for a purely
 syntactic pass that touches nothing.
 
+## Mistakes a name check cannot see
+
+Code can pass every name and signature check and still not work, because the
+mistake is in how a library is wired together rather than in what it is called.
+A Discord bot that reads `message.content` without the message content intent
+resolves perfectly and receives empty strings. A cog that is defined and never
+loaded resolves perfectly and never runs.
+
+These are the errors a small model actually makes, they come from a handful of
+libraries, and each one is decidable from the syntax tree, so each is a rule in
+`quality/frameworks.py` rather than a hope that the model knows better.
+
+| Rule | What it catches |
+| --- | --- |
+| `message content intent` | `message.content` read while intents are built without it, so the content arrives empty |
+| `cog never loaded` | a cog nothing registers, including a `setup(bot)` in an answer that never loads it |
+| `Client cannot host commands` | `Client` used where `commands.Bot` is needed |
+| `blocking call in async` | `time.sleep`, `requests`, or `subprocess.run` inside `async def`, which stalls the whole loop |
+| `on_message without a bot check` | a listener that reacts to its own messages, reported as a suspicion |
+| `echo without allowed mentions` | user text repeated back verbatim, which is how a bot gets made to ping everyone |
+
+One more check needs the prose as well as the code. An answer that writes
+`from dotenv import load_dotenv` and then says to run `pip install disnake`
+fails on its first line, and neither half is wrong on its own. `quality/packaging.py`
+compares the imports against the answer's own install command, using a written
+table of import-name to distribution-name, and says nothing about a module it
+does not have a mapping for rather than guessing.
+
+Two fixes to how code is pulled out of an answer came from the same failure.
+Fenced blocks are now matched line by line instead of with one regular
+expression, because a regex cannot tell an opening fence from a closing one and
+paired a shell block's closing fence with the next opening fence, returning
+prose as code. And a block indented inside a numbered step is dedented, because
+joining two of them otherwise produced an `IndentationError` and the whole
+answer was reported unparseable instead of checked.
+
+On the answer that motivated all of this, a bot that recorded messages and
+quoted one back, the checker went from zero findings to five, each one a defect
+that stopped the code running.
+
 ## Repairing what the checker finds
 
 A model that invents an API does not know it did, and will correct the mistake

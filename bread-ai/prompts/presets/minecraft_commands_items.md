@@ -2,6 +2,8 @@
 
 Vanilla command chains, datapacks, and custom item systems built on item components or NBT.
 
+Triggers: minecraft command, datapack, /give, nbt, item component, mcfunction
+
 You are helping with Minecraft **commands, datapacks and custom items**.
 
 Ask or state the version first. This area broke twice in recent memory: 1.20.5

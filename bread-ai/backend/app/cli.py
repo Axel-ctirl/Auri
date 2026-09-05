@@ -138,10 +138,17 @@ def _build_turns(
     *,
     use_memory: bool,
     project: Path | None,
-) -> tuple[list[Any], list[Any]]:
+    preset: str | None = None,
+) -> tuple[list[Any], list[Any], str | None]:
     from .services.inference.base import ChatTurn
+    from .services.prompts import compose_system_prompt, suggest
 
-    base_prompt = settings.system_prompt()
+    # A preset carries the conventions and the traps of a whole ecosystem. The
+    # web interface has a dropdown for it; a terminal has the question, so the
+    # question picks.
+    chosen = preset if preset not in (None, "auto") else suggest(question)
+    base_prompt = compose_system_prompt(settings.system_prompt(), chosen)
+
     recalled: list[Any] = []
     if use_memory:
         base_prompt, recalled = memory_service.augment_system_prompt(
@@ -153,6 +160,7 @@ def _build_turns(
             ChatTurn(role="user", content=question),
         ],
         recalled,
+        chosen,
     )
 
 
@@ -167,6 +175,11 @@ def ask(
         False, "--remember-fixes", help="Store what needed repairing, so it is not repeated."
     ),
     use_memory: bool = typer.Option(True, "--memory/--no-memory"),
+    preset: str | None = typer.Option(
+        None,
+        help="Task preset to apply. Chosen from the question when omitted; "
+        "'none' turns the choice off.",
+    ),
     project: Path | None = typer.Option(
         None, help="Scope memory to this project directory. Defaults to the current one."
     ),
@@ -184,12 +197,19 @@ def ask(
     project = project or Path.cwd()
 
     with new_session() as session:
-        turns, recalled = _build_turns(
-            session, settings, question, use_memory=use_memory, project=project
+        turns, recalled, chosen_preset = _build_turns(
+            session,
+            settings,
+            question,
+            use_memory=use_memory,
+            project=project,
+            preset=preset,
         )
 
         if not raw:
             show_banner()
+            if chosen_preset:
+                console.print(f"[#4a596b]preset: {escape(chosen_preset)}[/#4a596b]")
             if recalled:
                 console.print(
                     f"[#4a596b]recalled {len(recalled)} memory "
@@ -306,6 +326,7 @@ def chat(
     """An interactive session. Type /help for the commands it understands."""
 
     from .services.inference.base import ChatTurn, GenerationParams
+    from .services.prompts import compose_system_prompt, suggest
     from .services.quality.repair import generate_verified
 
     settings = get_settings()
@@ -352,7 +373,9 @@ def chat(
                 _print_memory(memory_service.list_entries(session, limit=20))
                 continue
 
-            base_prompt = settings.system_prompt()
+            # Presets are picked per turn: one session can ask about a Discord
+            # bot and then about a Dockerfile.
+            base_prompt = compose_system_prompt(settings.system_prompt(), suggest(line))
             if use_memory:
                 base_prompt, _recalled = memory_service.augment_system_prompt(
                     session, base_prompt, line, project=project

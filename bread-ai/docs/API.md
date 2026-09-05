@@ -132,6 +132,7 @@ Three request fields change what a turn does:
 | `use_memory` | Include remembered context in the system prompt. Defaults to `MEMORY_ENABLED`. |
 | `project_path` | The working directory this turn belongs to. Project-scoped memory for it is recalled alongside global memory. |
 | `verify_code` | Check the Python in the reply for invented APIs and let the model correct itself first. Buffered `/api/chat` only. |
+| `preset` | A preset name from `/api/prompts/presets`, or `"auto"` to pick one from the question. |
 
 The buffered response reports both back:
 

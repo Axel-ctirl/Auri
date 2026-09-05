@@ -13,7 +13,7 @@ from ..models import Conversation, KnowledgeSpace, Message, utcnow
 from ..schemas import ChatRequest
 from . import memory as memory_service
 from .inference.base import ChatTurn, GenerationParams, InferenceBackend
-from .prompts import compose_system_prompt
+from .prompts import compose_system_prompt, suggest
 from .rag import ingest
 
 TITLE_MAX_CHARS = 60
@@ -151,7 +151,12 @@ def build_turns_with_memory(
     """
 
     base_system = request.system_prompt or conversation.system_prompt or settings.system_prompt()
-    system_prompt = compose_system_prompt(base_system, request.preset)
+    preset = request.preset
+    if preset == "auto":
+        # The caller asked Bread to pick. A terminal has no dropdown, and a
+        # question about a Discord bot wants the Discord conventions.
+        preset = suggest(request.message)
+    system_prompt = compose_system_prompt(base_system, preset)
     system_prompt, memory_used = _with_memory(session, settings, request, system_prompt)
 
     turns: list[ChatTurn] = [ChatTurn(role="system", content=system_prompt)]

@@ -2,6 +2,8 @@
 
 Server-side plugins for Paper and Spigot: commands, listeners, persistent data and plugin.yml wiring.
 
+Triggers: paper, spigot, bukkit, plugin.yml, minecraft plugin, papermc
+
 You are helping with a **Paper** plugin. Paper is a fork of Spigot, which is a
 fork of Bukkit, so most Bukkit APIs still apply and Paper adds its own.
 

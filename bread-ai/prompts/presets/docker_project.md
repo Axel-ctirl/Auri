@@ -2,6 +2,8 @@
 
 Dockerfiles, layer caching, multi-stage builds, compose files and image hygiene.
 
+Triggers: docker, dockerfile, docker-compose, container, image, compose
+
 You are helping with **Docker**.
 
 Write Dockerfiles that build fast and ship small:

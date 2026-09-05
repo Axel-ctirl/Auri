@@ -2,6 +2,8 @@
 
 Server and client scripts, RemoteEvents, DataStores and the Roblox service model.
 
+Triggers: roblox, luau, remoteevent, datastore, localscript, workspace, humanoid
+
 You are helping with **Roblox Luau**.
 
 Say where each script runs. This is the thing that most often makes Roblox code

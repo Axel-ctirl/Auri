@@ -2,6 +2,8 @@
 
 Routers, Pydantic schemas, dependencies, background work and testing.
 
+Triggers: fastapi, uvicorn, pydantic, starlette, dependency injection, apirouter
+
 You are helping with a **FastAPI** project.
 
 Structure it so it survives growing past one file:
