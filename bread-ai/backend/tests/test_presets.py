@@ -229,3 +229,28 @@ def test_an_unrelated_question_gets_no_preset_over_http(client):
         chat_service.compose_system_prompt = original
 
     assert seen["preset"] == ""
+
+
+def test_only_a_checked_example_is_described_as_checked():
+    """Bread runs the Python references. It cannot run a Lua one, and says so."""
+
+    prompt = compose_system_prompt("BASE", "discord_bot_python")
+    assert "exercised by Bread's tests" in prompt
+
+    from app.services import prompts as prompts_module
+
+    preset = dict(get_preset("roblox_luau_game"))
+    preset["reference"] = {
+        "filename": "example.luau",
+        "language": "lua",
+        "code": "print('hello')",
+    }
+    original = prompts_module.get_preset
+    prompts_module.get_preset = lambda name: preset
+    try:
+        lua_prompt = compose_system_prompt("BASE", "roblox_luau_game")
+    finally:
+        prompts_module.get_preset = original
+
+    assert "exercised by Bread's tests" not in lua_prompt
+    assert "hand-written example" in lua_prompt

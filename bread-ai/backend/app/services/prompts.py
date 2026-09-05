@@ -150,11 +150,20 @@ def compose_system_prompt(
 
     reference = preset.get("reference")
     if include_reference and reference:
+        # Only the Python references are checked and executed by the test suite,
+        # so only they get told to the model as verified. Claiming more of a Lua
+        # or Java example than Bread can prove is the overclaiming this project
+        # exists to avoid.
+        provenance = (
+            "checked against the installed libraries and exercised by Bread's tests"
+            if reference["language"] == "python"
+            else "a hand-written example of the conventions above"
+        )
         parts.append(
-            "### A worked example that runs\n\n"
-            f"This is `{reference['filename']}`, checked against the installed libraries. "
-            "Follow its shape and its precautions. Do not copy it back verbatim when the "
-            "user asked for something else.\n\n"
+            f"### A worked example\n\n"
+            f"This is `{reference['filename']}`, {provenance}. Follow its shape and its "
+            "precautions. Do not copy it back verbatim when the user asked for something "
+            "else.\n\n"
             f"```{reference['language']}\n{reference['code']}\n```"
         )
     return "\n\n".join(parts)
