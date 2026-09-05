@@ -99,9 +99,35 @@ def main(context: typer.Context) -> None:
 
 
 # --------------------------------------------------------------------- asking
-def _load_backend(settings: Any) -> Any:
+def _load_backend(settings: Any, *, quiet: bool = False) -> Any:
+    """Bring the configured model up for this process.
+
+    The server keeps a model loaded between requests, so it can insist you load
+    one deliberately. A CLI process starts empty every time, so insisting would
+    mean no CLI question ever works. It loads what `.env` already names instead,
+    from weights already on disk: a download still needs
+    `bread models load ID --download`.
+    """
+
+    from .errors import BreadError
     from .services.inference import registry
 
+    try:
+        return registry.get_or_autoload(settings)
+    except BreadError:
+        pass
+
+    if not quiet:
+        console.print(
+            f"[#4a596b]loading {escape(settings.model_id)} "
+            f"({settings.model_backend}, cached weights only)[/#4a596b]"
+        )
+    with (
+        console.status("[#c07a2f]loading the model[/#c07a2f]", spinner="dots")
+        if not quiet
+        else _NullContext()
+    ):
+        registry.load(settings, {"confirm_download": False})
     return registry.get_or_autoload(settings)
 
 
@@ -739,7 +765,18 @@ def run() -> None:
     if backend_root not in sys.path:
         sys.path.insert(0, backend_root)
     os.environ.setdefault("PYTHONUNBUFFERED", "1")
-    app()
+
+    from .errors import BreadError
+
+    try:
+        app()
+    except BreadError as error:
+        # These carry a message and a hint written for a person. A traceback
+        # buries both.
+        console.print(f"[#f87171]{escape(error.message)}[/#f87171]")
+        if error.hint:
+            console.print(f"[#4a596b]{escape(error.hint)}[/#4a596b]")
+        raise SystemExit(1) from None
 
 
 if __name__ == "__main__":

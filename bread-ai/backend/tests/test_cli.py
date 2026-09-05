@@ -137,3 +137,28 @@ def test_system_prompt_is_printable(cli):
     result = cli.invoke(app, ["system-prompt"])
     assert result.exit_code == 0
     assert "Bread" in result.stdout
+
+
+def test_a_cli_process_loads_the_model_env_names(bread_env, monkeypatch):
+    """The server can insist you load a model. A one-shot CLI process cannot."""
+
+    from app import cli
+    from app.errors import BreadError
+    from app.services.inference import registry
+
+    loaded: list[dict] = []
+
+    def refuse(_settings=None):
+        if not loaded:
+            raise BreadError("No model is loaded.", code="model_not_loaded")
+        return "the backend"
+
+    def record(_settings, options):
+        loaded.append(options)
+
+    monkeypatch.setattr(registry, "get_or_autoload", refuse)
+    monkeypatch.setattr(registry, "load", record)
+
+    assert cli._load_backend(bread_env, quiet=True) == "the backend"
+    # Loading from disk is fine. Downloading gigabytes is not, and stays opt-in.
+    assert loaded == [{"confirm_download": False}]

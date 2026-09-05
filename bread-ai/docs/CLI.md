@@ -45,6 +45,29 @@ otherwise whatever `python3` resolves to. Set `BREAD_PYTHON` to override that.
 | `bread create-key` | Mint an API key for LAN mode |
 | `bread system-prompt` | Print the prompt Bread is actually using |
 
+## Loading a model
+
+The server keeps a model in memory between requests, so it can insist you load
+one deliberately. A CLI process starts empty every time, so insisting would mean
+no `bread ask` ever worked. It loads what `.env` already names, from weights
+already on disk:
+
+```
+$ bread ask "..."
+loading Qwen/Qwen2.5-Coder-7B-Instruct (transformers, cached weights only)
+```
+
+A download is still explicit. If the weights are not cached, the load fails with
+a message telling you to run:
+
+```bash
+bread models load Qwen/Qwen2.5-Coder-7B-Instruct --download
+```
+
+`bread models list` shows the catalogue and marks what is loaded. With
+`MODEL_BACKEND=mock` nothing is loaded at all and answers are a fixed template,
+which is how the whole interface works before you commit to a 15 GB download.
+
 ## Asking a question
 
 ```bash
