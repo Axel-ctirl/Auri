@@ -53,11 +53,15 @@ and `/tpablock` all refuse to run.
 
 **Combat logging.** Disconnecting while tagged kills the player where they stood, dropping their
 inventory as a normal death. The kill is forced with `setHealth(0)` followed by `onDeath(source)`
-rather than routed through `damage()`: `damage()` has a long list of guards — invulnerability
-frames, `isInvulnerableTo`, difficulty, ability flags — any of which makes it return false and
-silently leave the logger alive. Forcing it is unconditional and still runs the normal death, so
-the inventory drops, the death message is sent and the kill is credited. Every punishment is also
-written to the server log, so it can be confirmed without a witness. It is driven from vanilla's own player-removal path, so it fires for
+rather than routed through `damage()`, which can return false for reasons outside the mod's
+control. Forcing it is unconditional and still runs the normal death, so the inventory drops, the
+death message is sent and the kill is credited. Every punishment is also written to the server log,
+so it can be confirmed without a witness.
+
+The whole path is verified end to end against two headless clients on a real 1.21.11 server: a
+genuine melee hit followed by a hard socket drop, the same followed by a clean quit, a disconnect
+while untagged (which must not punish), and that the victim's inventory is on the ground
+afterwards. It is driven from vanilla's own player-removal path, so it fires for
 a clean quit and for a client that simply vanishes — alt-F4, a crash, a dropped connection —
 alike. Kill credit goes to the last player who hit them, so the death
 message and any kill tracking name the right person. If that player is offline the kill falls

@@ -172,11 +172,11 @@ public final class CombatManager {
                 ? world.getDamageSources().playerAttack(killer)
                 : world.getDamageSources().genericKill();
 
-        // Forcing the death rather than routing through damage(). damage() has a long list of
-        // guards -- invulnerability frames, isInvulnerableTo, difficulty, ability flags -- any of
-        // which makes it return false and quietly leave the player alive, which is precisely the
-        // failure this used to have. setHealth + onDeath is unconditional and still runs the
-        // normal death: the inventory drops, the death message is sent, the kill is credited.
+        // Forced rather than routed through damage(). Testing showed damage() also works here,
+        // so this is not what the old bug was -- that was the disconnect hook. It is kept because
+        // damage() can still return false for reasons outside our control (invulnerability
+        // frames, isInvulnerableTo, ability flags), whereas setHealth + onDeath is unconditional
+        // and still runs the normal death: inventory drops, death message, kill credited.
         try {
             if (killer != null) {
                 player.setAttacking(killer, 100);
