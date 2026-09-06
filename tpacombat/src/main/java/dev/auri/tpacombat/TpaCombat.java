@@ -41,14 +41,14 @@ public final class TpaCombat implements DedicatedServerModInitializer {
         CombatManager combat = new CombatManager();
         combat.setStore(store);
 
-        // A dedicated combat-logging mod hooks the disconnect earlier than this one does, so it
-        // would always win the race and this mod's punishment would silently never fire. Detect
-        // that up front and hand the job over, rather than leaving two implementations competing.
+        // Both mods now hook the same seam, so whichever runs second would find an already dead
+        // player and skip. Deferring keeps that deterministic rather than order-dependent, and is
+        // only reached if CombatLogger is actually installed alongside this mod.
         boolean externalCombatLogger = FabricLoader.getInstance().isModLoaded("combatlogger");
         combat.setDeferPunishment(externalCombatLogger);
         if (externalCombatLogger) {
-            LOGGER.info("CombatLogger detected - leaving combat-log punishment to it. "
-                    + "Combat tagging stays active for teleport restrictions and alerts.");
+            LOGGER.info("CombatLogger is installed, so it keeps combat-log punishment. "
+                    + "Remove it to let this mod handle combat logging instead.");
         }
         TpaManager tpa = new TpaManager(combat);
         TpaCommands commands = new TpaCommands(tpa, combat, store, social);

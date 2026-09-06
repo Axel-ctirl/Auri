@@ -7,7 +7,7 @@
     "NetworkFilterMixin",
     "EnderPearlMixin",
     "PhantomTargetMixin",
-    "PlayerManagerMixin"
+    "PlayNetworkHandlerMixin"
   ],
   "injectors": {
     "defaultRequire": 1

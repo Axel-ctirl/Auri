@@ -12,9 +12,11 @@ import net.minecraft.server.network.ServerPlayerEntity;
  * combat-log kill issued there could land on the wrong thread, or after the player was already
  * removed and saved, and quietly do nothing.
  *
- * <p>{@code PlayerManager.remove} is always on the server thread and its first actions happen
- * while the player is still in the world, before {@code savePlayerData}. Killing there produces a
- * normal death -- items drop, the death is saved -- which is exactly what combat logging needs.
+ * <p>The hook is the head of {@code ServerPlayNetworkHandler.onDisconnected}, the same seam a
+ * dedicated combat-logging mod uses. It is the earliest point at which the player is still fully
+ * in the world, before vanilla removes and saves them, so the kill produces a normal death: items
+ * drop and the dead state is what gets written. Hooking later, at {@code PlayerManager.remove},
+ * meant another mod on this seam always got there first and this one never fired.
  */
 public final class DisconnectHandler {
 
