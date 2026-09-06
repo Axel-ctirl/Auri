@@ -138,28 +138,12 @@ public final class PlaytimeTracker {
             if (parent != null) {
                 Files.createDirectories(parent);
             }
-
-            List<Map.Entry<UUID, PlayerProfile>> rows = new ArrayList<>(store.all().entrySet());
-            rows.removeIf(e -> e.getValue().playtimeMillis <= 0L && e.getValue().sessions == 0);
-            rows.sort((a, b) -> Long.compare(totalMillis(b.getKey()), totalMillis(a.getKey())));
-
+            List<Row> rows = rows(server);
             try (Writer writer = Files.newBufferedWriter(path)) {
-                writer.write("uuid,name,playtime_seconds,playtime,sessions,first_seen_utc,last_seen_utc,online\n");
-                for (Map.Entry<UUID, PlayerProfile> row : rows) {
-                    UUID uuid = row.getKey();
-                    PlayerProfile profile = row.getValue();
-                    long millis = totalMillis(uuid);
-                    boolean online = server.getPlayerManager().getPlayer(uuid) != null;
-                    writer.write(String.join(",",
-                            uuid.toString(),
-                            csv(profile.lastKnownName),
-                            String.valueOf(millis / 1000L),
-                            csv(format(millis)),
-                            String.valueOf(profile.sessions),
-                            csv(stamp(profile.firstSeenEpoch)),
-                            csv(stamp(profile.lastSeenEpoch)),
-                            String.valueOf(online)));
-                    writer.write("\n");
+                if ("csv".equalsIgnoreCase(Config.get().playtime.format)) {
+                    writeCsv(writer, rows);
+                } else {
+                    writeTable(writer, rows);
                 }
             }
         } catch (Exception e) {
@@ -167,8 +151,106 @@ public final class PlaytimeTracker {
         }
     }
 
+    private record Row(UUID uuid, String name, long millis, int sessions,
+                       long firstSeen, long lastSeen, boolean online) {
+    }
+
+    private List<Row> rows(MinecraftServer server) {
+        List<Row> rows = new ArrayList<>();
+        for (Map.Entry<UUID, PlayerProfile> entry : store.all().entrySet()) {
+            PlayerProfile profile = entry.getValue();
+            if (profile.playtimeMillis <= 0L && profile.sessions == 0) {
+                continue;
+            }
+            UUID uuid = entry.getKey();
+            String name = profile.lastKnownName == null || profile.lastKnownName.isEmpty()
+                    ? uuid.toString().substring(0, 8)
+                    : profile.lastKnownName;
+            rows.add(new Row(uuid, name, totalMillis(uuid), profile.sessions,
+                    profile.firstSeenEpoch, profile.lastSeenEpoch,
+                    server.getPlayerManager().getPlayer(uuid) != null));
+        }
+        rows.sort((a, b) -> Long.compare(b.millis(), a.millis()));
+        return rows;
+    }
+
+    /** Aligned fixed-width report, meant to be read in a text editor. */
+    private static void writeTable(Writer writer, List<Row> rows) throws Exception {
+        int rankWidth = Math.max(1, String.valueOf(rows.size()).length());
+        int nameWidth = "PLAYER".length();
+        int timeWidth = "PLAYTIME".length();
+        for (Row row : rows) {
+            nameWidth = Math.max(nameWidth, row.name().length());
+            timeWidth = Math.max(timeWidth, format(row.millis()).length());
+        }
+
+        long totalMillis = 0L;
+        int online = 0;
+        for (Row row : rows) {
+            totalMillis += row.millis();
+            if (row.online()) {
+                online++;
+            }
+        }
+
+        String title = Config.get().tablist.serverName + " - Playtime";
+        writer.write(title + "\n");
+        writer.write("Updated " + stamp(System.currentTimeMillis()) + " UTC\n");
+        writer.write(rows.size() + " players tracked, " + online + " online, "
+                + format(totalMillis) + " total\n\n");
+
+        String header = "  " + pad("#", rankWidth, true) + "  " + pad("PLAYER", nameWidth, false)
+                + "  " + pad("PLAYTIME", timeWidth, true) + "  SESSIONS  LAST SEEN (UTC)";
+        writer.write(header + "\n");
+        writer.write("  " + "-".repeat(Math.max(header.length() - 2, 10)) + "\n");
+
+        int rank = 0;
+        for (Row row : rows) {
+            rank++;
+            writer.write("  " + pad(String.valueOf(rank), rankWidth, true)
+                    + "  " + pad(row.name(), nameWidth, false)
+                    + "  " + pad(format(row.millis()), timeWidth, true)
+                    + "  " + pad(String.valueOf(row.sessions()), 8, true)
+                    + "  " + (row.online() ? "online now" : shortStamp(row.lastSeen()))
+                    + "\n");
+        }
+        if (rows.isEmpty()) {
+            writer.write("  (nobody has joined yet)\n");
+        }
+    }
+
+    private static String pad(String value, int width, boolean right) {
+        if (value.length() >= width) {
+            return value;
+        }
+        String spaces = " ".repeat(width - value.length());
+        return right ? spaces + value : value + spaces;
+    }
+
+    private static void writeCsv(Writer writer, List<Row> rows) throws Exception {
+        writer.write("uuid,name,playtime_seconds,playtime,sessions,first_seen_utc,last_seen_utc,online\n");
+        for (Row row : rows) {
+            writer.write(String.join(",",
+                    row.uuid().toString(),
+                    csv(row.name()),
+                    String.valueOf(row.millis() / 1000L),
+                    csv(format(row.millis())),
+                    String.valueOf(row.sessions()),
+                    csv(stamp(row.firstSeen())),
+                    csv(stamp(row.lastSeen())),
+                    String.valueOf(row.online())));
+            writer.write("\n");
+        }
+    }
+
     private static String stamp(long epochMillis) {
         return epochMillis == 0L ? "" : STAMP.format(Instant.ofEpochMilli(epochMillis));
+    }
+
+    /** Minute precision is plenty for a "last seen" column and keeps it narrow. */
+    private static String shortStamp(long epochMillis) {
+        String full = stamp(epochMillis);
+        return full.isEmpty() ? "-" : full.substring(0, 16);
     }
 
     /** Names are Mojang-constrained, but quote defensively so the CSV cannot be broken. */

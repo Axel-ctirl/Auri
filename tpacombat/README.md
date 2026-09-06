@@ -239,18 +239,29 @@ assumed:
 
 ## Playtime tracking
 
-Connected time is accumulated per player and written to a CSV the host can read, by default
-`playtime.csv` in the server's working directory — the folder beside `server.properties` on a
-host panel.
+Connected time is accumulated per player and written to `playtime.txt` in the server's working
+directory — the folder beside `server.properties` on a host panel.
 
 ```
-uuid,name,playtime_seconds,playtime,sessions,first_seen_utc,last_seen_utc,online
-2222...,Zayney_Baney,275400,3d 4h 30m,40,2025-08-24 01:46:40,2025-09-06 23:06:40,false
+Exploit Smp - Playtime
+Updated 2026-09-06 04:17:35 UTC
+3 players tracked, 0 online, 3d 8h 0m total
+
+  #  PLAYER             PLAYTIME  SESSIONS  LAST SEEN (UTC)
+  ---------------------------------------------------------
+  1  Zayney_Baney      3d 4h 30m        40  2025-09-06 23:06
+  2  RedTheSweat          2h 30m        12  2025-09-05 19:20
 ```
 
-Rows are sorted longest first. Times are wall-clock milliseconds rather than ticks, so a lagging
-server still records real elapsed time, and timestamps are UTC. Names are quoted per RFC 4180 when
-they would otherwise break the format.
+Columns size themselves to the content, so the report stays aligned as names and totals grow, and
+anyone currently connected shows `online now` instead of a timestamp.
+
+Set `playtime.format` to `csv` for a spreadsheet-ready file instead, with a UUID column and raw
+seconds alongside the readable duration. Names are quoted per RFC 4180 when they would otherwise
+break the format.
+
+Rows are sorted longest first in both formats. Times are wall-clock milliseconds rather than
+ticks, so a lagging server still records real elapsed time, and timestamps are UTC.
 
 Time is banked every minute rather than only on disconnect, so a crash or a hard kill loses at
 most a minute per player instead of the whole session. The report is rewritten on that same
@@ -304,6 +315,7 @@ The server name is drawn in the accent colour, not bold.
 | `tablist.refreshTicks` | How often to check for a player-count change. 20 = once a second. 1–1200. |
 | `playtime.enabled` | Track connected time and write the report. |
 | `playtime.reportFile` | Where the report goes. Relative paths resolve against the server directory. |
+| `playtime.format` | `table` for the aligned report, `csv` for a spreadsheet. |
 | `playtime.reportIntervalMinutes` | How often the report is rewritten. 1–1440. |
 
 Per-player settings are not in this file — they live in the world save, one entry per player.

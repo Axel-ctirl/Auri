@@ -83,7 +83,9 @@ public final class Config {
          * Where the report is written. A relative path lands in the server's working directory,
          * which on a host panel is the folder you see beside server.properties.
          */
-        public String reportFile = "playtime.csv";
+        public String reportFile = "playtime.txt";
+        /** "table" for an aligned, readable report, or "csv" to feed a spreadsheet. */
+        public String format = "table";
         /** How often the report is rewritten while the server runs. */
         public int reportIntervalMinutes = 5;
     }
@@ -153,6 +155,15 @@ public final class Config {
     private void migrate() {
         if (LEGACY_COMMANDS.equals(tablist.commands)) {
             tablist.commands = new ArrayList<>(new TabListSettings().commands);
+        }
+        if (playtime.format == null) {
+            playtime.format = new Playtime().format;
+        }
+        // The report shipped as CSV first. Move an untouched old default onto the readable table.
+        // GSON leaves an absent field at its initialiser, not null, so "did they set format?"
+        // cannot be tested for null -- anyone who actually wants CSV has format set to csv.
+        if ("playtime.csv".equals(playtime.reportFile) && "table".equalsIgnoreCase(playtime.format)) {
+            playtime.reportFile = new Playtime().reportFile;
         }
     }
 
