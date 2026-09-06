@@ -6,7 +6,8 @@
   "server": [
     "NetworkFilterMixin",
     "EnderPearlMixin",
-    "PhantomTargetMixin"
+    "PhantomTargetMixin",
+    "PlayerManagerMixin"
   ],
   "injectors": {
     "defaultRequire": 1

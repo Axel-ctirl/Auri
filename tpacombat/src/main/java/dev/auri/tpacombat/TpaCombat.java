@@ -85,11 +85,9 @@ public final class TpaCombat implements DedicatedServerModInitializer {
             playtime.onJoin(handler.getPlayer());
         });
 
-        ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
-            combat.onDisconnect(handler.getPlayer());
-            tpa.onDisconnect(handler.getPlayer());
-            playtime.onDisconnect(handler.getPlayer());
-        });
+        // Leave handling runs from PlayerManager.remove instead of the DISCONNECT event; see
+        // DisconnectHandler for why that event is the wrong place for it.
+        DisconnectHandler.init(combat, tpa, playtime);
 
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
             commands.register(dispatcher);
