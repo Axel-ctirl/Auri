@@ -12,6 +12,10 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 
 public final class SettingsCommands {
 
+    /** Command literal. /settings stays registered as an alias for muscle memory. */
+    public static final String ROOT = "setting";
+    private static final String ALIAS = "settings";
+
     private final PlayerDataStore store;
     private final PlayerEffects effects;
 
@@ -21,7 +25,7 @@ public final class SettingsCommands {
     }
 
     public void register(CommandDispatcher<ServerCommandSource> dispatcher) {
-        var root = CommandManager.literal("settings")
+        var root = CommandManager.literal(ROOT)
                 .executes(context -> {
                     ServerPlayerEntity player = context.getSource().getPlayerOrThrow();
                     SettingsDialogs.openRoot(player, store.get(player.getUuid()));
@@ -72,7 +76,7 @@ public final class SettingsCommands {
 
         root = root.then(CommandManager.literal("autosearch").executes(context -> {
             SettingsDialogs.openNameEntry(context.getSource().getPlayerOrThrow(),
-                    "Auto-accept teleport requests from:", "settings autoadd", "settings autoaccept");
+                    "Auto-accept teleport requests from:", ROOT + " autoadd", ROOT + " autoaccept");
             return 1;
         }));
 
@@ -101,7 +105,8 @@ public final class SettingsCommands {
                                         StringArgumentType.getString(context, "setting"),
                                         StringArgumentType.getString(context, "value"))))));
 
-        dispatcher.register(root);
+        var built = dispatcher.register(root);
+        dispatcher.register(CommandManager.literal(ALIAS).redirect(built));
     }
 
     /** Unfollow addressed by UUID, so friend-list buttons work for offline players. */

@@ -44,6 +44,13 @@ public final class PlayerProfile {
     /** Which list the Friends tab is showing: friends, following or followers. */
     public String friendsFilter = "friends";
 
+    // Playtime, accumulated server-side. Millis rather than ticks so a lagging server still
+    // measures real time on the server.
+    public long playtimeMillis = 0L;
+    public long firstSeenEpoch = 0L;
+    public long lastSeenEpoch = 0L;
+    public int sessions = 0;
+
     /** Last name seen for this player, so offline lookups can show something useful. */
     public String lastKnownName = "";
 

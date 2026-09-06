@@ -27,6 +27,7 @@ public final class Config {
     public Combat combat = new Combat();
     public Tpa tpa = new Tpa();
     public TabListSettings tablist = new TabListSettings();
+    public Playtime playtime = new Playtime();
 
     public static final class Combat {
         /** Seconds a player stays combat-tagged after the last PvP hit dealt or received. */
@@ -75,6 +76,18 @@ public final class Config {
      * still holding exactly this list was never edited, so it is safe to move it forward; anything
      * customised is left alone.
      */
+    public static final class Playtime {
+        /** Track how long each player is connected. */
+        public boolean enabled = true;
+        /**
+         * Where the report is written. A relative path lands in the server's working directory,
+         * which on a host panel is the folder you see beside server.properties.
+         */
+        public String reportFile = "playtime.csv";
+        /** How often the report is rewritten while the server runs. */
+        public int reportIntervalMinutes = 5;
+    }
+
     private static final List<String> LEGACY_COMMANDS = List.of("/gotorift", "/maces", "/tps");
 
     private static volatile Config instance = new Config();
@@ -107,6 +120,9 @@ public final class Config {
             }
             if (loaded.tablist == null) {
                 loaded.tablist = new TabListSettings();
+            }
+            if (loaded.playtime == null) {
+                loaded.playtime = new Playtime();
             }
             if (loaded.tablist.commands == null) {
                 loaded.tablist.commands = new ArrayList<>();
@@ -147,6 +163,7 @@ public final class Config {
         tpa.teleportDelaySeconds = clamp(tpa.teleportDelaySeconds, 0, 3600);
         tpa.cancelCooldownSeconds = clamp(tpa.cancelCooldownSeconds, 0, 3600);
         tablist.refreshTicks = clamp(tablist.refreshTicks, 1, 1200);
+        playtime.reportIntervalMinutes = clamp(playtime.reportIntervalMinutes, 1, 1440);
     }
 
     private static int clamp(int value, int min, int max) {

@@ -41,7 +41,7 @@
       "width": 200,
       "action": {
         "type": "run_command",
-        "command": "settings chat"
+        "command": "setting chat"
       }
     },
     {
@@ -63,7 +63,7 @@
       "width": 200,
       "action": {
         "type": "run_command",
-        "command": "settings notifications"
+        "command": "setting notifications"
       }
     },
     {
@@ -85,7 +85,7 @@
       "width": 200,
       "action": {
         "type": "run_command",
-        "command": "settings pvp"
+        "command": "setting pvp"
       }
     },
     {
@@ -107,7 +107,7 @@
       "width": 200,
       "action": {
         "type": "run_command",
-        "command": "settings privacy"
+        "command": "setting privacy"
       }
     },
     {
@@ -129,7 +129,7 @@
       "width": 200,
       "action": {
         "type": "run_command",
-        "command": "settings general"
+        "command": "setting general"
       }
     },
     {
@@ -151,7 +151,7 @@
       "width": 200,
       "action": {
         "type": "run_command",
-        "command": "settings friends"
+        "command": "setting friends"
       }
     }
   ],

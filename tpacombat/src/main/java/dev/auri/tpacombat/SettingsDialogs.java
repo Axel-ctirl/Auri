@@ -40,6 +40,9 @@ public final class SettingsDialogs {
 
     private static final int BUTTON_WIDTH = 200;
 
+    /** Root literal of the command that drives every screen. */
+    private static final String CMD = SettingsCommands.ROOT;
+
     private SettingsDialogs() {
     }
 
@@ -62,7 +65,7 @@ public final class SettingsDialogs {
             buttons.add(plainButton(
                     Text.literal("Auto Accept List").formatted(Formatting.WHITE),
                     "Players whose teleport requests skip the prompt",
-                    "settings autoaccept"));
+                    CMD + " autoaccept"));
         }
 
         open(player, new MultiActionDialog(
@@ -105,11 +108,11 @@ public final class SettingsDialogs {
                 Text.literal("Filter: ").formatted(Formatting.GRAY)
                         .append(Text.literal(filterLabel(profile.friendsFilter)).formatted(Formatting.WHITE)),
                 "Cycle between friends, following and followers",
-                "settings friendsfilter"));
+                CMD + " friendsfilter"));
         buttons.add(plainButton(
                 Text.literal("Search").formatted(Formatting.WHITE),
                 "Look up a player by name",
-                "settings friendsearch"));
+                CMD + " friendsearch"));
 
         for (UUID id : shown) {
             buttons.add(playerButton(server, social, id));
@@ -118,7 +121,7 @@ public final class SettingsDialogs {
         buttons.add(plainButton(
                 Text.literal("+ Follow").formatted(Formatting.GREEN),
                 "Follow a player by name",
-                "settings friendsearch"));
+                CMD + " friendsearch"));
 
         MutableText counts = Text.empty()
                 .append(Text.literal(social.friends(self).size() + " friends").formatted(Formatting.WHITE))
@@ -156,11 +159,11 @@ public final class SettingsDialogs {
             }
             label.append(Text.literal(name).formatted(online != null ? Formatting.WHITE : Formatting.GRAY));
             buttons.add(plainButton(label, "Click to remove from auto accept",
-                    "settings autoremove " + id));
+                    CMD + " autoremove " + id));
         }
 
         buttons.add(plainButton(Text.literal("+ Add Player").formatted(Formatting.GREEN),
-                "Auto-accept a player's teleport requests", "settings autosearch"));
+                "Auto-accept a player's teleport requests", CMD + " autosearch"));
 
         MutableText counts = Text.empty()
                 .append(Text.literal(profile.autoAccept.size() + " auto-accepted").formatted(Formatting.WHITE));
@@ -172,7 +175,7 @@ public final class SettingsDialogs {
                                 "Their /tpa and /tpahere are accepted without asking.")
                                 .formatted(Formatting.GRAY), 260))),
                 buttons,
-                Optional.of(backButton("settings privacy")),
+                Optional.of(backButton(CMD + " privacy")),
                 1));
     }
 
@@ -208,10 +211,10 @@ public final class SettingsDialogs {
 
         DialogActionButtonData search = new DialogActionButtonData(
                 new DialogButtonData(Text.literal("Search").formatted(Formatting.GREEN), Optional.empty(), 200),
-                template("settings finduser $(player_name)"));
+                template(CMD + " finduser $(player_name)"));
         DialogActionButtonData cancel = new DialogActionButtonData(
                 new DialogButtonData(Text.literal("Cancel").formatted(Formatting.RED), Optional.empty(), 200),
-                Optional.of(new SimpleDialogAction(new ClickEvent.RunCommand("settings friends"))));
+                Optional.of(new SimpleDialogAction(new ClickEvent.RunCommand(CMD + " friends"))));
 
         DialogCommonData common = new DialogCommonData(
                 title(),
@@ -246,7 +249,7 @@ public final class SettingsDialogs {
         // Addressed by UUID so the button works for offline players too, where the
         // player-argument form of /unfollow cannot resolve a name.
         return plainButton(label, online != null ? "Online - click to unfollow" : "Offline - click to unfollow",
-                "settings unfollowid " + id);
+                CMD + " unfollowid " + id);
     }
 
     // ------------------------------------------------------------------ shared pieces
@@ -270,7 +273,7 @@ public final class SettingsDialogs {
         DialogButtonData button = new DialogButtonData(label,
                 Optional.of(Text.literal(setting.description()).formatted(Formatting.GRAY)), BUTTON_WIDTH);
         return new DialogActionButtonData(button,
-                Optional.of(new SimpleDialogAction(new ClickEvent.RunCommand("settings open " + setting.id()))));
+                Optional.of(new SimpleDialogAction(new ClickEvent.RunCommand(CMD + " open " + setting.id()))));
     }
 
     /**
@@ -292,7 +295,7 @@ public final class SettingsDialogs {
             buttons.add(new DialogActionButtonData(button, selected
                     ? Optional.empty()
                     : Optional.of(new SimpleDialogAction(
-                            new ClickEvent.RunCommand("settings set " + setting.id() + " " + key)))));
+                            new ClickEvent.RunCommand(CMD + " set " + setting.id() + " " + key)))));
         }
 
         SettingsRegistry.Category category = SettingsRegistry.category(setting.category());
@@ -306,7 +309,7 @@ public final class SettingsDialogs {
         open(player, new MultiActionDialog(
                 common(title(), body),
                 buttons,
-                Optional.of(backButton("settings " + setting.category())),
+                Optional.of(backButton(CMD + " " + setting.category())),
                 1));
     }
 
@@ -318,7 +321,7 @@ public final class SettingsDialogs {
                 Optional.of(Text.literal("Open " + category.title()).formatted(Formatting.DARK_GRAY)),
                 BUTTON_WIDTH);
         return new DialogActionButtonData(button,
-                Optional.of(new SimpleDialogAction(new ClickEvent.RunCommand("settings " + category.id()))));
+                Optional.of(new SimpleDialogAction(new ClickEvent.RunCommand(CMD + " " + category.id()))));
     }
 
     private static DialogActionButtonData plainButton(Text label, String tooltip, String command) {
@@ -329,7 +332,7 @@ public final class SettingsDialogs {
     }
 
     private static DialogActionButtonData backButton() {
-        return backButton("settings");
+        return backButton(CMD);
     }
 
     private static DialogActionButtonData backButton(String command) {

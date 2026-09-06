@@ -92,10 +92,10 @@ clickable, so `/gotorift`, `/maces` and `/tps` still need to come from whatever 
 It is resent only when the player count actually changes, plus once to each player as they join,
 so it costs one small packet per change rather than one per tick.
 
-## Settings menu (G)
+## Settings menu (/setting)
 
-Press **G** (Quick Actions) to open the settings menu. It also appears in the pause menu under
-**Custom Options**. No client mod is needed.
+Run **`/setting`** to open the settings menu. It also appears in the pause menu under
+**Custom Options**. No client mod is needed. `/settings` is registered as an alias.
 
 This uses vanilla **dialogs**, added to Minecraft in 1.21.6 — a server-driven UI that vanilla
 clients render natively. It is not a chest GUI and not a Paper-only feature; Paper's Dialog API is
@@ -147,8 +147,8 @@ no error logged anywhere — the dialog still loads fine.
 | | Night Vision | ON / OFF |
 | Friends | follow list, filter and search | |
 
-Everything is also reachable from chat: `/settings`, `/settings <category>`,
-`/settings open <setting>` and `/settings set <setting> <value>`, both with tab completion.
+Everything is also reachable directly: `/setting <category>`, `/setting open <setting>` and
+`/setting set <setting> <value>`, the last two with tab completion.
 
 Settings are stored per player at `<world>/data/tpacombat_players.json`, flushed about once a
 minute and on shutdown.
@@ -235,6 +235,25 @@ assumed:
 | Totem and Explosion Particles | ON | vanilla renders them |
 | Private Messages, Who Can TPA You | Everyone | no vanilla restriction |
 
+## Playtime tracking
+
+Connected time is accumulated per player and written to a CSV the host can read, by default
+`playtime.csv` in the server's working directory — the folder beside `server.properties` on a
+host panel.
+
+```
+uuid,name,playtime_seconds,playtime,sessions,first_seen_utc,last_seen_utc,online
+2222...,Zayney_Baney,275400,3d 4h 30m,40,2025-08-24 01:46:40,2025-09-06 23:06:40,false
+```
+
+Rows are sorted longest first. Times are wall-clock milliseconds rather than ticks, so a lagging
+server still records real elapsed time, and timestamps are UTC. Names are quoted per RFC 4180 when
+they would otherwise break the format.
+
+Time is banked every minute rather than only on disconnect, so a crash or a hard kill loses at
+most a minute per player instead of the whole session. The report is rewritten on that same
+schedule and once more on shutdown, and the totals it reports include the slice not yet banked.
+
 ## Config
 
 Written to `config/tpacombat.json` on first start, re-read on every server start. Values are
@@ -281,6 +300,9 @@ clamped to the same ranges the original Forge config enforced.
 The server name is drawn in the accent colour, not bold.
 | `tablist.accentColor` | Named Minecraft colour, e.g. `red`, `gold`, `aqua`. Bad names fall back to red. |
 | `tablist.refreshTicks` | How often to check for a player-count change. 20 = once a second. 1–1200. |
+| `playtime.enabled` | Track connected time and write the report. |
+| `playtime.reportFile` | Where the report goes. Relative paths resolve against the server directory. |
+| `playtime.reportIntervalMinutes` | How often the report is rewritten. 1–1440. |
 
 Per-player settings are not in this file — they live in the world save, one entry per player.
 

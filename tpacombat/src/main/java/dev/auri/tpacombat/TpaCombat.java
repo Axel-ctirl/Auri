@@ -26,6 +26,7 @@ public final class TpaCombat implements DedicatedServerModInitializer {
         SocialManager social = new SocialManager(store);
         socialManager = social;
         PlayerEffects effects = new PlayerEffects(store);
+        PlaytimeTracker playtime = new PlaytimeTracker(store);
 
         PacketFilter.init(store);
         PearlSettings.init(store);
@@ -51,6 +52,7 @@ public final class TpaCombat implements DedicatedServerModInitializer {
 
         // Registered before players are disconnected, so a restart is never punished as a combat log.
         ServerLifecycleEvents.SERVER_STOPPING.register(server -> {
+            playtime.onServerStopping(server);
             combat.onServerStopping();
             tpa.blocks().save();
             store.save();
@@ -63,6 +65,7 @@ public final class TpaCombat implements DedicatedServerModInitializer {
             tpa.onEndTick(server);
             tabList.onEndTick(server);
             effects.onEndTick(server);
+            playtime.onEndTick(server);
             if (++saveTimer[0] >= 1200) {
                 saveTimer[0] = 0;
                 store.saveIfDirty();
@@ -79,11 +82,13 @@ public final class TpaCombat implements DedicatedServerModInitializer {
             store.get(handler.getPlayer().getUuid()).lastKnownName =
                     handler.getPlayer().getGameProfile().name();
             store.markDirty();
+            playtime.onJoin(handler.getPlayer());
         });
 
         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
             combat.onDisconnect(handler.getPlayer());
             tpa.onDisconnect(handler.getPlayer());
+            playtime.onDisconnect(handler.getPlayer());
         });
 
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
