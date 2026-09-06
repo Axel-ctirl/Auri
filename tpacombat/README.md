@@ -52,7 +52,9 @@ While tagged, an action bar counts the tag down once a second, and `/tpa`, `/tpa
 and `/tpablock` all refuse to run.
 
 **Combat logging.** Disconnecting while tagged kills the player where they stood, dropping their
-inventory as a normal death. Kill credit goes to the last player who hit them, so the death
+inventory as a normal death. It is driven from vanilla's own player-removal path, so it fires for
+a clean quit and for a client that simply vanishes — alt-F4, a crash, a dropped connection —
+alike. Kill credit goes to the last player who hit them, so the death
 message and any kill tracking name the right person. If that player is offline the kill falls
 back to a generic death. Deaths are announced server-wide when `broadcastCombatLog` is on.
 
@@ -327,8 +329,14 @@ differences worth knowing about:
 - **Kill credit.** `player.hurt(damageSources().playerAttack(killer), MAX_VALUE)` became
   `player.damage(world, world.getDamageSources().playerAttack(killer), MAX_VALUE)`, with
   `timeUntilRegen` zeroed first exactly as before so invulnerability frames can't absorb it.
-- **Disconnect hook.** `PlayerLoggedOutEvent` became `ServerPlayConnectionEvents.DISCONNECT`,
-  which also runs while the player is still in the world — required for the kill to drop items.
+- **Disconnect hook.** `PlayerLoggedOutEvent` became a mixin at the head of
+  `PlayerManager.remove`, *not* `ServerPlayConnectionEvents.DISCONNECT`. That event is fired from
+  whichever of `Connection.channelInactive` or `handleDisconnection` reaches it first, and the
+  former runs on a netty IO thread — so a kill issued from it can land off the server thread, or
+  after the player has already been removed and saved, and silently do nothing.
+  `PlayerManager.remove` is always on the server thread and its first statements run while the
+  player is still in the world, before `savePlayerData`, so the kill produces a normal death that
+  then gets saved.
 - **Text.** `Component`/`ClickEvent(Action, String)` became `Text`/`new ClickEvent.RunCommand(...)`,
   which is a sealed-interface record in 1.21.11. The client runs these through
   `CommandManager.stripLeadingSlash`, so commands work with or without a leading `/`.
