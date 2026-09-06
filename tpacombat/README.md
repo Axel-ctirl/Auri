@@ -256,6 +256,17 @@ Updated 2026-09-06 04:17:35 UTC
 Columns size themselves to the content, so the report stays aligned as names and totals grow, and
 anyone currently connected shows `online now` instead of a timestamp.
 
+Operators can also read it in game, without opening the file:
+
+| Command | Effect |
+| --- | --- |
+| `/playtime` | Top 10 by time played. |
+| `/playtime top <count>` | Top N, up to 100. |
+| `/playtime <player>` | One player's total, session count, and first and last seen. |
+
+The lookup works on offline players by the name last recorded for them, and tab-completes over
+everyone tracked. All of it requires permission level 2, so ordinary players cannot see it.
+
 Set `playtime.format` to `csv` for a spreadsheet-ready file instead, with a UUID column and raw
 seconds alongside the readable duration. Names are quoted per RFC 4180 when they would otherwise
 break the format.

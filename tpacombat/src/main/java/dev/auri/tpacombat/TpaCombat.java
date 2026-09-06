@@ -93,6 +93,7 @@ public final class TpaCombat implements DedicatedServerModInitializer {
             commands.register(dispatcher);
             settingsCommands.register(dispatcher);
             socialCommands.register(dispatcher);
+            new PlaytimeCommand(playtime).register(dispatcher);
         });
     }
 }

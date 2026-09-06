@@ -151,11 +151,13 @@ public final class PlaytimeTracker {
         }
     }
 
-    private record Row(UUID uuid, String name, long millis, int sessions,
-                       long firstSeen, long lastSeen, boolean online) {
+    /** One line of the report; also what the op command reads. */
+    public record Row(UUID uuid, String name, long millis, int sessions,
+                      long firstSeen, long lastSeen, boolean online) {
     }
 
-    private List<Row> rows(MinecraftServer server) {
+    /** Tracked players, longest played first. */
+    public List<Row> rows(MinecraftServer server) {
         List<Row> rows = new ArrayList<>();
         for (Map.Entry<UUID, PlayerProfile> entry : store.all().entrySet()) {
             PlayerProfile profile = entry.getValue();
@@ -245,6 +247,11 @@ public final class PlaytimeTracker {
 
     private static String stamp(long epochMillis) {
         return epochMillis == 0L ? "" : STAMP.format(Instant.ofEpochMilli(epochMillis));
+    }
+
+    /** Minute-precision timestamp, or a dash when the player has never been seen. */
+    public static String stampOrDash(long epochMillis) {
+        return shortStamp(epochMillis);
     }
 
     /** Minute precision is plenty for a "last seen" column and keeps it narrow. */
