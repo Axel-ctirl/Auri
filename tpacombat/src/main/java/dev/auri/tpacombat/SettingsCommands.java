@@ -25,12 +25,7 @@ public final class SettingsCommands {
     }
 
     public void register(CommandDispatcher<ServerCommandSource> dispatcher) {
-        var root = CommandManager.literal(ROOT)
-                .executes(context -> {
-                    ServerPlayerEntity player = context.getSource().getPlayerOrThrow();
-                    SettingsDialogs.openRoot(player, store.get(player.getUuid()));
-                    return 1;
-                });
+        var root = CommandManager.literal(ROOT).executes(this::openRootScreen);
 
         for (SettingsRegistry.Category category : SettingsRegistry.categories()) {
             root = root.then(CommandManager.literal(category.id()).executes(context -> {
@@ -106,7 +101,11 @@ public final class SettingsCommands {
                                         StringArgumentType.getString(context, "value"))))));
 
         var built = dispatcher.register(root);
-        dispatcher.register(CommandManager.literal(ALIAS).redirect(built));
+        // redirect() forwards further parsing but leaves the alias node itself non-executable,
+        // so the bare alias needs its own executes or "/settings" alone is an unknown command.
+        dispatcher.register(CommandManager.literal(ALIAS)
+                .executes(this::openRootScreen)
+                .redirect(built));
     }
 
     /** Unfollow addressed by UUID, so friend-list buttons work for offline players. */
@@ -186,6 +185,13 @@ public final class SettingsCommands {
             }
         }
         SettingsDialogs.openAutoAccept(player, profile);
+        return 1;
+    }
+
+    private int openRootScreen(com.mojang.brigadier.context.CommandContext<ServerCommandSource> context)
+            throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        ServerPlayerEntity player = context.getSource().getPlayerOrThrow();
+        SettingsDialogs.openRoot(player, store.get(player.getUuid()));
         return 1;
     }
 
