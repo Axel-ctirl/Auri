@@ -6,6 +6,8 @@ import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Iterator;
 import java.util.Map;
@@ -14,6 +16,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /** PvP combat tagging and the combat-log punishment. */
 public final class CombatManager {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger("tpacombat");
 
     private final Map<UUID, Long> tagged = new ConcurrentHashMap<>();
     private final Map<UUID, Hit> lastAttacker = new ConcurrentHashMap<>();
@@ -164,15 +168,32 @@ public final class CombatManager {
 
         ServerPlayerEntity killer = hit == null ? null : server.getPlayerManager().getPlayer(hit.player());
         ServerWorld world = player.getEntityWorld();
+        DamageSource source = killer != null
+                ? world.getDamageSources().playerAttack(killer)
+                : world.getDamageSources().genericKill();
 
-        player.timeUntilRegen = 0;
-        if (killer != null) {
-            player.damage(world, world.getDamageSources().playerAttack(killer), Float.MAX_VALUE);
+        // Forcing the death rather than routing through damage(). damage() has a long list of
+        // guards -- invulnerability frames, isInvulnerableTo, difficulty, ability flags -- any of
+        // which makes it return false and quietly leave the player alive, which is precisely the
+        // failure this used to have. setHealth + onDeath is unconditional and still runs the
+        // normal death: the inventory drops, the death message is sent, the kill is credited.
+        try {
+            if (killer != null) {
+                player.setAttacking(killer, 100);
+            }
+            player.setHealth(0.0F);
+            player.onDeath(source);
+        } catch (Exception e) {
+            LOGGER.error("Failed to punish combat logger {}", player.getGameProfile().name(), e);
+            try {
+                player.setHealth(0.0F);
+            } catch (Exception ignored) {
+                // nothing further we can do
+            }
         }
-        if (!isDeadOrDying(player)) {
-            player.timeUntilRegen = 0;
-            player.damage(world, world.getDamageSources().genericKill(), Float.MAX_VALUE);
-        }
+
+        LOGGER.info("{} combat-logged{} and was killed.", player.getGameProfile().name(),
+                hit == null ? "" : " while fighting " + hit.name());
 
         if (Config.get().combat.broadcastCombatLog) {
             String name = player.getGameProfile().name();

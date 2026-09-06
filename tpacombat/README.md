@@ -52,7 +52,12 @@ While tagged, an action bar counts the tag down once a second, and `/tpa`, `/tpa
 and `/tpablock` all refuse to run.
 
 **Combat logging.** Disconnecting while tagged kills the player where they stood, dropping their
-inventory as a normal death. It is driven from vanilla's own player-removal path, so it fires for
+inventory as a normal death. The kill is forced with `setHealth(0)` followed by `onDeath(source)`
+rather than routed through `damage()`: `damage()` has a long list of guards — invulnerability
+frames, `isInvulnerableTo`, difficulty, ability flags — any of which makes it return false and
+silently leave the logger alive. Forcing it is unconditional and still runs the normal death, so
+the inventory drops, the death message is sent and the kill is credited. Every punishment is also
+written to the server log, so it can be confirmed without a witness. It is driven from vanilla's own player-removal path, so it fires for
 a clean quit and for a client that simply vanishes — alt-F4, a crash, a dropped connection —
 alike. Kill credit goes to the last player who hit them, so the death
 message and any kill tracking name the right person. If that player is offline the kill falls
