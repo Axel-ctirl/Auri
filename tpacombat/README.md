@@ -51,8 +51,15 @@ not tag — this is a PvP-only system.
 While tagged, an action bar counts the tag down once a second, and `/tpa`, `/tpaccept`, `/tpdeny`
 and `/tpablock` all refuse to run.
 
-**Combat logging.** Disconnecting while tagged kills the player where they stood, dropping their
-inventory as a normal death. The kill is forced with `setHealth(0)` followed by `onDeath(source)`
+**Combat logging.** If [CombatLogger](https://modrinth.com/) is installed, this mod detects it at
+startup and hands the punishment over to it, logging that it has done so. CombatLogger hooks the
+disconnect earlier than this mod can, so it would always win the race anyway; deferring makes that
+explicit instead of leaving two implementations competing and one silently never firing. Combat
+tagging stays active either way, because the teleport restrictions and the combat countdown are
+built on it.
+
+With no such mod present, disconnecting while tagged kills the player where they stood, dropping
+their inventory as a normal death. The kill is forced with `setHealth(0)` followed by `onDeath(source)`
 rather than routed through `damage()`, which can return false for reasons outside the mod's
 control. Forcing it is unconditional and still runs the normal death, so the inventory drops, the
 death message is sent and the kill is credited. Every punishment is also written to the server log,

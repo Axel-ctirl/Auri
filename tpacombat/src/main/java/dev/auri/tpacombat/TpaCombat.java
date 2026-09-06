@@ -1,6 +1,9 @@
 package dev.auri.tpacombat;
 
 import net.fabricmc.api.DedicatedServerModInitializer;
+import net.fabricmc.loader.api.FabricLoader;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
@@ -10,6 +13,8 @@ import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 public final class TpaCombat implements DedicatedServerModInitializer {
 
     public static final String MOD_ID = "tpacombat";
+
+    private static final Logger LOGGER = LoggerFactory.getLogger("tpacombat");
 
     private static volatile SocialManager socialManager;
 
@@ -35,6 +40,16 @@ public final class TpaCombat implements DedicatedServerModInitializer {
 
         CombatManager combat = new CombatManager();
         combat.setStore(store);
+
+        // A dedicated combat-logging mod hooks the disconnect earlier than this one does, so it
+        // would always win the race and this mod's punishment would silently never fire. Detect
+        // that up front and hand the job over, rather than leaving two implementations competing.
+        boolean externalCombatLogger = FabricLoader.getInstance().isModLoaded("combatlogger");
+        combat.setDeferPunishment(externalCombatLogger);
+        if (externalCombatLogger) {
+            LOGGER.info("CombatLogger detected - leaving combat-log punishment to it. "
+                    + "Combat tagging stays active for teleport restrictions and alerts.");
+        }
         TpaManager tpa = new TpaManager(combat);
         TpaCommands commands = new TpaCommands(tpa, combat, store, social);
         SettingsCommands settingsCommands = new SettingsCommands(store, effects);

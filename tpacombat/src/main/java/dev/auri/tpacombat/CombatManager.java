@@ -22,11 +22,22 @@ public final class CombatManager {
     private final Map<UUID, Long> tagged = new ConcurrentHashMap<>();
     private final Map<UUID, Hit> lastAttacker = new ConcurrentHashMap<>();
     private volatile boolean serverStopping;
+
+    /**
+     * Set when a dedicated combat-logging mod is present. Tagging stays on, because the teleport
+     * restrictions and the combat HUD are built on it, but the punishment is left to that mod so
+     * a player cannot be killed twice for one disconnect.
+     */
+    private volatile boolean deferPunishment;
     private int tickCounter;
     private PlayerDataStore store;
 
     public void setStore(PlayerDataStore store) {
         this.store = store;
+    }
+
+    public void setDeferPunishment(boolean defer) {
+        this.deferPunishment = defer;
     }
 
     /** Combat alerts are opt-out per player; missing store means "not loaded yet", so allow. */
@@ -158,7 +169,7 @@ public final class CombatManager {
         if (!wasTagged || isDeadOrDying(player)) {
             return;
         }
-        if (serverStopping || !Config.get().combat.punishCombatLog) {
+        if (serverStopping || deferPunishment || !Config.get().combat.punishCombatLog) {
             return;
         }
         MinecraftServer server = player.getEntityWorld().getServer();
